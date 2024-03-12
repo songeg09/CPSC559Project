@@ -60,6 +60,28 @@ def ballot_list():
     # Assuming you have a 'ballot_list.html' template to render ballots
     return render_template('ballot_list.html', ballots=ballots)
 
+@app.route('/ballot_detail/<int:ballot_id>', methods=['GET'])
+def ballot_detail(ballot_id):
+    ballot_data = []
+    errors = []
+
+    for replica in REPLICA_ADDRESSES:
+        try:
+            response = requests.get(f"{replica}/ballot_detail/{ballot_id}")
+            if response.status_code == 200:
+                ballot_data.append(response.json())  # Assuming each replica returns a list of ballots
+            else:
+                errors.append(f"Error from replica {replica}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            errors.append(f"Request failed for replica {replica}: {str(e)}")
+
+    if errors:
+        return jsonify({"success": False, "errors": errors}), 500
+
+    ballot_title = ballot_data[0]["title"]
+    ballot_options = [option for data in ballot_data for option in data['options']]
+
+    return render_template('ballot_detail.html', title=ballot_title, options=ballot_options)
 
 @app.route('/votingpage')
 def votingpage():
