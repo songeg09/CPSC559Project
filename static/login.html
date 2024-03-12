@@ -116,18 +116,16 @@
     <div id="background"></div>
     <div class="login-container">
         <h1>OnVote</h1> 
-        {% if user.is_authenticated %}
             <p>Welcome, {{ user.username }}!</p>
             <a href="{% url 'accounts:logout' %}">Logout</a>
         {% else %}
-            <form action="" method="POST">
+            <form action="/login" method="POST">
                 {% csrf_token %}
                 <input name="username" type="text" placeholder="Username">
                 <input name="password" type="password" placeholder="Password">
                 <input type="submit" value="Login">
             </form>
-            <a href="{% url 'accounts:register' %}">Register</a>
-        {% endif %}
+            <a href="/signup">Register</a>
     </div>
     <script>
         const numBars = 50;
