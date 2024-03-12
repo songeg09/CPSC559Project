@@ -15,9 +15,26 @@ REPLICA_ADDRESSES = [
 def index():
     return send_from_directory('static', 'index.html')
 
-@app.route('/signup')
+@app.route('/signup', methods=['GET'])
 def signup():
     return send_from_directory('static', 'signup.html')
+
+@app.route('/submit_registration', methods=['POST'])
+def submit_registration():
+    user_data = request.form
+    errors = []
+
+    for replica in REPLICA_ADDRESSES:
+        try:
+            response = requests.post(replica + "register", data=user_data)
+            if response.status_code != 200:
+                errors.append(f"Error from replica {replica}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            errors.append(f"Request failed for replica {replica}: {str(e)}")
+
+    if errors:
+        return jsonify({"success": False, "errors": errors}), 500
+    return jsonify({"success": True, "message": "Registration successful"}), 200
 
 @app.route('/vote', methods=['POST'])
 def forward_vote():
