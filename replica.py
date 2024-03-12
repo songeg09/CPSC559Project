@@ -61,5 +61,10 @@ def register():
 
     return jsonify({"message": "User registered successfully"}), 200
 
+@app.route('/ballot_list', methods=['GET'])
+def ballot_list():
+
+    
+
 if __name__ == '__main__':
     app.run(port=5001)  # Run different instances on different ports.

@@ -16,7 +16,7 @@ REPLICA_ADDRESSES = [
 def index():
     return send_from_directory('static', 'index.html')
 
-@app.route('/signup', methods=['GET'])
+@app.route('/signup')
 def signup():
     return send_from_directory('static', 'signup.html')
 
@@ -37,9 +37,27 @@ def submit_registration():
         return jsonify({"success": False, "errors": errors}), 500
     return jsonify({"success": True, "message": "Registration successful"}), 200
 
-@app.route('/ballot_list')
+
+@app.route('/ballot_list', methods=['GET'])
 def ballot_list():
-    return send_from_directory('static', 'ballot_list.html')
+    errors = []
+    ballot_list_data = request.json
+
+    for replica in REPLICA_ADDRESSES:
+        try:
+            response = requests.get(replica + "/ballot_list")
+            if response.status_code == 200:
+                ballot_list_data.extend(response.json())
+            else:
+                errors.append(f"Error from replica {replica}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            errors.append(f"Request failed for replica {replica}: {str(e)}")
+
+    if errors:
+        return jsonify(errors), 500
+
+    return render_template('ballot_list.html', ballot_data=ballot_list_data)
+
 
 @app.route('/vote', methods=['POST'])
 def forward_vote():
