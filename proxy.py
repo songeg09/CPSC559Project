@@ -1,6 +1,7 @@
 import os
 from flask import Flask, render_template, request, jsonify, send_from_directory, session
 import requests
+from flask import Flask, request, redirect, url_for
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = 'your_secret_key'
@@ -34,7 +35,9 @@ def submit_registration():
 
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
+    return redirect(url_for('index'))
     return jsonify({"success": True, "message": "Registration successful"}), 200
+
 
 
 @app.route('/ballot_list', methods=['GET'])
@@ -93,6 +96,7 @@ def login():
                     if data.get('success'):
                         # Login successful, manage session
                         session['user'] = login_data['username']
+                        return redirect(url_for('index'))
                         return jsonify({"success": True, "message": "Login successful"}), 200
             except requests.exceptions.RequestException as e:
                 continue  # If a replica fails, try the next one
