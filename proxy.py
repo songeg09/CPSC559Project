@@ -20,6 +20,10 @@ def index():
 def signup():
     return send_from_directory('static', 'signup.html')
 
+@app.route('/login', methods=['GET'])
+def login():
+    return send_from_directory('static', 'login.html')
+
 @app.route('/submit_registration', methods=['POST'])
 def submit_registration():
     user_data = request.form
