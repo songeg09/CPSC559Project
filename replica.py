@@ -18,6 +18,12 @@ class User(db.Model):
     password = db.Column(db.String(80), nullable=False)  # In a real app, ensure you hash passwords
     email = db.Column(db.String(120), unique=True, nullable=False)
 
+class Ballot(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(250), nullable=True)  # Optional description field
+
+
 @app.before_request
 def create_tables():
     db.create_all()
@@ -63,7 +69,10 @@ def register():
 
 @app.route('/ballot_list', methods=['GET'])
 def ballot_list():
+    ballots = Ballot.query.all()  # Fetch all ballot records from the database
+    ballot_list = [{"id": ballot.id, "title": ballot.title, "description": ballot.description} for ballot in ballots]
 
+    return jsonify(ballot_list), 200
     
 @app.route('/authenticate', methods=['POST'])
 def authenticate():

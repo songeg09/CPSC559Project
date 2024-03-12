@@ -91,13 +91,13 @@
 </head>
 <body>
     <h2>Ballot List</h2>
-    <a href="{% url 'elections:ballot_create' %}" class="create-new">Create New Ballot</a>
+    <a href="/ballot_create" class="create-new">Create New Ballot</a>
     <ul class="ballot-list">
-        {% for ballot in object_list %}
+        {% for ballot in ballots %}
             <li>
-                <img src="path/to/image.jpg" alt="Ballot Image" class="ballot-img">
-                <span class="ballot-title">{{ ballot.title }}</span> 
-                <a href="{% url 'elections:ballot_edit' ballot.id %}" class="edit-link">Edit</a>
+                <img src="{{ ballot.img_url }}" alt="Ballot Image" class="ballot-img">
+                <span class="ballot-title">{{ ballot.title }}</span>
+                <a href="{{ url_for('ballot_edit', ballot_id=ballot.id) }}" class="edit-link">Edit</a>
             </li>
         {% endfor %}
     </ul>

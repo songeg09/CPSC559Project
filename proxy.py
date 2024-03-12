@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory, session
+from flask import Flask, render_template, request, jsonify, send_from_directory, session
 import requests
 
 app = Flask(__name__, static_folder='static')
@@ -17,7 +17,7 @@ def index():
 
 @app.route('/signup')
 def signup():
-    return send_from_directory('static', 'signup.html')
+    return render_template('signup.html')
 
 @app.route('/submit_registration', methods=['POST'])
 def submit_registration():
@@ -39,23 +39,23 @@ def submit_registration():
 
 @app.route('/ballot_list', methods=['GET'])
 def ballot_list():
+    ballots = []
     errors = []
-    ballot_list_data = request.json
 
     for replica in REPLICA_ADDRESSES:
         try:
-            response = requests.get(replica + "/ballot_list")
+            response = requests.get(replica + "ballot_list")
             if response.status_code == 200:
-                ballot_list_data.extend(response.json())
+                ballots.extend(response.json())  # Assuming each replica returns a list of ballots
             else:
                 errors.append(f"Error from replica {replica}: {response.text}")
         except requests.exceptions.RequestException as e:
             errors.append(f"Request failed for replica {replica}: {str(e)}")
 
     if errors:
-        return jsonify(errors), 500
-
-    return render_template('ballot_list.html', ballot_data=ballot_list_data)
+        return jsonify({"success": False, "errors": errors}), 500
+    # Assuming you have a 'ballot_list.html' template to render ballots
+    return render_template('ballot_list.html', ballots=ballots)
 
 
 @app.route('/vote', methods=['POST'])
@@ -96,8 +96,7 @@ def login():
         return jsonify({"success": False, "message": "Login failed"}), 401  # Authentication failed
     else:
         # Serve the login page for GET requests
-        return send_from_directory('static', 'login.html')
+        return render_template('login.html')
 
 if __name__ == '__main__':
-    os.makedirs('static', exist_ok=True)
     app.run(port=5000)
