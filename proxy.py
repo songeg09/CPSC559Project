@@ -15,6 +15,10 @@ REPLICA_ADDRESSES = [
 def index():
     return send_from_directory('static', 'index.html')
 
+@app.route('/signup')
+def signup():
+    return send_from_directory('static', 'signup.html')
+
 @app.route('/vote', methods=['POST'])
 def forward_vote():
     vote_data = request.json
