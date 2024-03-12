@@ -113,8 +113,6 @@ def logout():
     # Redirect the user to the home page
     return redirect(url_for('index'))
 
-from flask import render_template, request, redirect, url_for
-
 @app.route('/ballot_create', methods=['GET', 'POST'])
 def ballot_create():
     if request.method == 'POST':
