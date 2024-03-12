@@ -24,6 +24,10 @@ def signup():
 def login():
     return send_from_directory('static', 'login.html')
 
+@app.route('/ballot_list')
+def ballot_list():
+    return send_from_directory('static', 'ballot_list.html')
+
 @app.route('/vote', methods=['POST'])
 def forward_vote():
     vote_data = request.json
