@@ -1,0 +1,29 @@
+<!-- templates/ballot_create.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Ballot</title>
+</head>
+<body>
+    <h1>Create a New Ballot</h1>
+    <form action="/ballot_create" method="post">
+        <label for="title">Ballot Title:</label>
+        <input type="text" id="title" name="title"><br><br>
+
+        <label for="start_date">Start Date:</label>
+        <input type="text" id="start_date" name="start_date" placeholder="YYYY-MM-DD"><br><br>
+
+        <label for="end_date">End Date:</label>
+        <input type="text" id="end_date" name="end_date" placeholder="YYYY-MM-DD"><br><br>
+
+        <label>Ballot Options:</label><br>
+        <input type="text" name="options[]" placeholder="Option 1"><br>
+        <input type="text" name="options[]" placeholder="Option 2"><br>
+        <input type="text" name="options[]" placeholder="Option 3"><br>
+        <!-- Add more options as needed or implement a dynamic JavaScript solution to add more fields -->
+
+        <input type="submit" value="Create Ballot">
+    </form>
+</body>
+</html>

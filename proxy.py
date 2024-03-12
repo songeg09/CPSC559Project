@@ -102,5 +102,41 @@ def login():
         # Serve the login page for GET requests
         return render_template('login.html')
 
+from flask import render_template, request, redirect, url_for
+
+@app.route('/ballot_create', methods=['GET', 'POST'])
+def ballot_create():
+    if request.method == 'POST':
+        title = request.form['title']
+        start_date = request.form['start_date']
+        end_date = request.form['end_date']
+        options = request.form.getlist('options[]')  # Extracts all input fields named 'options[]'
+        
+        ballot_data = {
+            'title': title,
+            'start_date': start_date,
+            'end_date': end_date,
+            'options': options
+        }
+        
+        errors = []
+
+        for replica in REPLICA_ADDRESSES:
+            try:
+                response = requests.post(replica + "create_ballot", json=ballot_data)  # Notice the use of json=ballot_data here
+                if response.status_code != 200:
+                    errors.append(f"Error from replica {replica}: {response.text}")
+            except requests.exceptions.RequestException as e:
+                errors.append(f"Request failed for replica {replica}: {str(e)}")
+
+        if errors:
+            return render_template('ballot_create.html', errors=errors)
+        
+        return redirect(url_for('ballot_list'))
+
+    return render_template('ballot_create.html')
+
+
+
 if __name__ == '__main__':
     app.run(port=5000)

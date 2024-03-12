@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from datetime import date, datetime
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///votes.db'
@@ -21,8 +22,15 @@ class User(db.Model):
 class Ballot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.String(250), nullable=True)  # Optional description field
+    description = db.Column(db.String(250), nullable=True)
+    start_date = db.Column(db.Date, nullable=False, default=date.today)
+    end_date = db.Column(db.Date, nullable=False, default=date.today)
 
+class BallotOption(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ballot_id = db.Column(db.Integer, db.ForeignKey('ballot.id'), nullable=False)
+    option_text = db.Column(db.String(250), nullable=False)
+    ballot = db.relationship('Ballot', backref=db.backref('options', lazy=True))
 
 @app.before_request
 def create_tables():
@@ -85,6 +93,26 @@ def authenticate():
         return jsonify({"success": True}), 200
     else:
         return jsonify({"success": False}), 401
+
+@app.route('/create_ballot', methods=['POST'])
+def create_ballot():
+    data = request.json
+    title = data['title']
+    description = data.get('description', '')  # Optional
+    start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
+    end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+    options = data['options']
+
+    new_ballot = Ballot(title=title, description=description, start_date=start_date, end_date=end_date)
+    db.session.add(new_ballot)
+    db.session.flush()  # Flush to assign an ID to new_ballot
+
+    for option_text in options:
+        new_option = BallotOption(ballot_id=new_ballot.id, option_text=option_text)
+        db.session.add(new_option)
+
+    db.session.commit()
+    return jsonify({"success": True, "message": "Ballot and options created successfully"}), 200
 
 if __name__ == '__main__':
     app.run(port=5001)  # Run different instances on different ports.
