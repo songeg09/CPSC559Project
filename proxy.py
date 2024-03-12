@@ -19,6 +19,10 @@ def index():
 def signup():
     return send_from_directory('static', 'signup.html')
 
+@app.route('/login')
+def login():
+    return send_from_directory('static', 'login.html')
+
 @app.route('/vote', methods=['POST'])
 def forward_vote():
     vote_data = request.json
