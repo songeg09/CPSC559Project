@@ -116,14 +116,17 @@
     <div id="background"></div>
     <div class="login-container">
         <h1>OnVote</h1> 
-            <p>Welcome, User!</p>
-            <a href="{}">Logout</a>
+        {% if 'user' in session %}
+            <p>Welcome, {{ session['user'] }}!</p>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        {% else %}
             <form action="/login" method="POST">
                 <input name="username" type="text" placeholder="Username">
                 <input name="password" type="password" placeholder="Password">
                 <input type="submit" value="Login">
             </form>
             <a href="/signup">Register</a>
+        {% endif %}
     </div>
     <script>
         const numBars = 50;

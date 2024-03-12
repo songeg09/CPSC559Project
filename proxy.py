@@ -106,6 +106,13 @@ def login():
         # Serve the login page for GET requests
         return render_template('login.html')
 
+@app.route('/logout')
+def logout():
+    # Clear the user session
+    session.pop('user', None)
+    # Redirect the user to the home page
+    return redirect(url_for('index'))
+
 from flask import render_template, request, redirect, url_for
 
 @app.route('/ballot_create', methods=['GET', 'POST'])
