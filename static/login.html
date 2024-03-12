@@ -116,7 +116,6 @@
     <div id="background"></div>
     <div class="login-container">
         <h1>OnVote</h1> 
-        {% if user.is_authenticated %}
             <p>Welcome, {{ user.username }}!</p>
             <a href="{% url 'accounts:logout' %}">Logout</a>
         {% else %}
@@ -127,7 +126,6 @@
                 <input type="submit" value="Login">
             </form>
             <a href="/signup">Register</a>
-        {% endif %}
     </div>
     <script>
         const numBars = 50;
