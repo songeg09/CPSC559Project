@@ -58,6 +58,10 @@ def ballot_list():
     return render_template('ballot_list.html', ballot_data=ballot_list_data)
 
 
+@app.route('/votingpage')
+def votingpage():
+    return send_from_directory('static', 'votingpage.html')
+
 @app.route('/vote', methods=['POST'])
 def forward_vote():
     vote_data = request.json

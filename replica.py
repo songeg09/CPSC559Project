@@ -63,19 +63,18 @@ def register():
 
 @app.route('/ballot_list', methods=['GET'])
 def ballot_list():
-
     
-@app.route('/authenticate', methods=['POST'])
-def authenticate():
-    username = request.form['username']
-    password = request.form['password']  # Remember, you should hash passwords in real applications
+    @app.route('/authenticate', methods=['POST'])
+    def authenticate():
+        username = request.form['username']
+        password = request.form['password']  # Remember, you should hash passwords in real applications
 
-    # Query the database for the user
-    user = User.query.filter_by(username=username).first()
-    if user and user.password == password:  # Simple check; in real apps, use password hashing
-        return jsonify({"success": True}), 200
-    else:
-        return jsonify({"success": False}), 401
+        # Query the database for the user
+        user = User.query.filter_by(username=username).first()
+        if user and user.password == password:  # Simple check; in real apps, use password hashing
+            return jsonify({"success": True}), 200
+        else:
+            return jsonify({"success": False}), 401
 
 if __name__ == '__main__':
     app.run(port=5001)  # Run different instances on different ports.
