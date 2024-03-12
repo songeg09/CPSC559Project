@@ -4,64 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to OnVote</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: linear-gradient(to bottom right, #ffffff, #0056b3);
-        }
-
-        #background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: -1;
-            overflow: hidden;
-        }
-
-        .bar {
-            position: absolute;
-            bottom: 0;
-            width: 20px;
-            background: rgba(0, 38, 255, 0.5); 
-            transition: height 0.08s, background-color 0.1s;
-        }
-
-        .welcome-title {
-            text-align: center;
-            font-size: 2.25rem; 
-            color: #255a92;
-            margin-bottom: 1.25rem; 
-        }
-
-        .button-container {
-            display: flex;
-            flex-direction: grid;
-            align-items: center;
-            margin-top: 20px;
-        }
-
-        .button-container button {
-            background-color: #007bff;
-            color: #fff;
-            cursor: pointer;
-            border-radius: 20px;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-            border: none;
-            margin: 10px;
-            padding: 10px 20px;
-            font-size: 16px;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/index.css">
 </head>
 <body>
     <div id="background"></div>
@@ -71,36 +14,6 @@
         <button onclick="window.location.href='/login'">Login/Logout</button>
         <button onclick="window.location.href='/ballot_list'">View and Create Elections</button>
     </div>
-
-    <script>
-        const numBars = 50;
-        const background = document.getElementById('background');
-        const activationDistance = 200; 
-        const maxHeight = 400; 
-        const colorBrightness = 100; 
-    
-        for (let i = 0; i < numBars; i++) {
-            let bar = document.createElement('div');
-            bar.classList.add('bar');
-            bar.style.height = `${Math.random() * 100}px`;
-            bar.style.left = `${i / numBars * 100}%`;
-            background.appendChild(bar);
-        }
-        
-        document.addEventListener('mousemove', function(e) {
-            const bars = document.querySelectorAll('.bar');
-            bars.forEach(function(bar, index) {
-                const dx = e.clientX - bar.getBoundingClientRect().left;
-                const dy = e.clientY - bar.getBoundingClientRect().top - activationDistance; 
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                let height = Math.max(maxHeight - distance / 2, 10); 
-                height = Math.min(height, maxHeight); 
-                bar.style.height = `${height}px`;
-                
-                const blueIntensity = Math.min(255, colorBrightness + Math.floor((height / maxHeight) * (255 - colorBrightness)));
-                bar.style.backgroundColor = `rgb(0, ${blueIntensity}, 255)`;
-            });
-        });
-    </script>
+    <script src="/static/js/index.js"></script>
 </body>
 </html>
