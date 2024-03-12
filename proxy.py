@@ -1,7 +1,8 @@
-from flask import Flask, request, jsonify
+import os
+from flask import Flask, request, jsonify, send_from_directory
 import requests
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
 # List of replicas
 REPLICA_ADDRESSES = [
@@ -9,6 +10,10 @@ REPLICA_ADDRESSES = [
     'http://localhost:5002/',
     # Add other replicas as needed
 ]
+
+@app.route('/')
+def index():
+    return send_from_directory('static', 'index.html')
 
 @app.route('/vote', methods=['POST'])
 def forward_vote():
@@ -28,4 +33,5 @@ def forward_vote():
     return jsonify({"success": True, "message": "Vote sent to all replicas"}), 200
 
 if __name__ == '__main__':
+    os.makedirs('static', exist_ok=True)
     app.run(port=5000)
