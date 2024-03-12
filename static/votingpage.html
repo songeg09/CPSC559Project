@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voting App</title>
+</head>
+<body>
+<h1>Vote Now!</h1>
+<form id="vote-form">
+    <input type="radio" id="voteYes" name="vote" value="yes">
+    <label for="voteYes">Yes</label><br>
+    <input type="radio" id="voteNo" name="vote" value="no">
+    <label for="voteNo">No</label><br>
+    <button type="submit">Submit Vote</button>
+</form>
+
+<script>
+    document.getElementById('vote-form').onsubmit = function(event) {
+        event.preventDefault();
+
+        // Get the selected vote value
+        const vote = document.querySelector('input[name="vote"]:checked').value;
+
+        // Send the vote to the proxy server
+        fetch('http://127.0.0.1:5000/vote', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ vote: vote })
+        })
+        .then(response => response.json())
+        .then(data => alert(data.status))
+        .catch(error => alert('Error sending vote: ' + error));
+    };
+</script>
+
+</body>
+</html>
