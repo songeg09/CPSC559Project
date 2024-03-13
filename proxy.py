@@ -130,7 +130,7 @@ def fetch_ballot_detail(replica, ballot_id):
     except requests.exceptions.RequestException as e:
         return {"error": f"Request failed for replica {replica}: {str(e)}"}
 
-app.route('/vote_detail/<int:ballot_id>', methods=['GET'])
+@app.route('/vote_detail/<int:ballot_id>', methods=['GET'])
 def vote_detail(ballot_id):
     global active_replicas
     ballot_data = []

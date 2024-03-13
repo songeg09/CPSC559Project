@@ -4,19 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <title>Edit Ballot</title>
+    <link rel="stylesheet" href="/static/css/ballot_edit.css"> <!-- Ensure you have this CSS file -->
 </head>
 <body>
     {% include 'menu_bar.html' %}
-<h1>{{ title }}</h1>
-<form action="{{ url_for('submit_ballot_edit', ballot_id=ballot_id) }}" method="POST">
-    <ul>
-        {% for option in options %}
-        <li>
-            <input type="text" name="option_{{ option.id }}" value="{{ option.option_text }}">
-        </li>
-        {% endfor %}
-    </ul>
-    <input type="submit" value="Update Options">
-</form>
+
+    <h1>{{ title }}</h1>
+    <form action="{{ url_for('submit_ballot_edit', ballot_id=ballot_id) }}" method="POST">
+        <ul style="list-style-type: none;"> <!-- Added inline CSS for demonstration. Consider moving this to your CSS file -->
+            {% for option in options %}
+            <li>
+                <label for="option_{{ option.id }}">Option {{ loop.index }}:</label> <!-- Assuming loop.index is usable for labeling -->
+                <input type="text" id="option_{{ option.id }}" name="option_{{ option.id }}" value="{{ option.option_text }}"><br><br>
+            </li>
+            {% endfor %}
+        </ul>
+        <input type="submit" value="Update Options">
+    </form>
 </body>
 </html>
