@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="/static/css/ballot_list.css">
 </head>
 <body>
+    {% include 'menu_bar.html' %}
+
     <h2>Ballot List</h2>
     <ul class="ballot-list">
         {% for ballot in ballots %}

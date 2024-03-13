@@ -6,6 +6,8 @@
     <title>Edit Ballot</title>
 </head>
 <body>
+    {% include 'menu_bar.html' %}
+
 <h1>{{ title }}</h1>
 <form action="{{ url_for('submit_ballot_edit', ballot_id=ballot_id) }}" method="POST">
     <ul>
