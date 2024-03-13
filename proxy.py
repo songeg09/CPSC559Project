@@ -14,7 +14,7 @@ REPLICA_ADDRESSES = [
 
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
+    return render_template('index.html')
 
 @app.route('/signup')
 def signup():
