@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Bar</title>
+    <link rel="stylesheet" href="/static/css/menu_bar.css">
+</head>
+<body>
+    <div class="menu-bar">
+        <button onclick="window.location.href='/'">Return to Home Page</button>
+
+        {% if 'user' in session %}
+            <button onclick="window.location.href='/logout'">Logout</button>
+        {% endif %}
+
+    </div>
+    
+</body>
+</html>

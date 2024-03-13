@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="/static/css/vote_detail.css">
 </head>
 <body>
+    {% include 'menu_bar.html' %}
+
     <h2>{{ title }}</h2>
     <form action="/vote_submit" method="post">
         {% for option in options %}

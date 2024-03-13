@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="/static/css/ballot_create.css">
 </head>
 <body>
+    {% include 'menu_bar.html' %}
+
     <h1>Create a New Ballot</h1>
     <form action="/ballot_create" method="post">
         <label for="title">Ballot Title:</label>

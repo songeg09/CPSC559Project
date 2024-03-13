@@ -111,6 +111,30 @@ def ballot_edit(ballot_id):
     return jsonify(ballot_data)
 
 
+@app.route('/submit_ballot_edit/<int:ballot_id>', methods=['POST'])
+def submit_ballot_edit(ballot_id):
+    updated_options = request.json.get("options", [])
+    # print debug
+    print(f"Updated options for ballot {ballot_id}: {updated_options}")
+    return jsonify({"success": True})
+
+# @app.route('/ballot_edit/<int:ballot_id>', methods=['GET'])
+# def ballot_edit(ballot_id):
+#     # Simulated data retrieval
+#     ballot_data = {
+#         "title": "Example Ballot",
+#         "options": [{"id": 1, "option_text": "Option 1"}, {"id": 2, "option_text": "Option 2"}]
+#     }
+#     return jsonify(ballot_data)
+
+# @app.route('/submit_ballot_edit/<int:ballot_id>', methods=['POST'])
+# def submit_ballot_edit(ballot_id):
+#     updated_options = request.json.get("options", [])
+#     # Here, you'd update the options in the database based on updated_options
+#     print(f"Updated options for ballot {ballot_id}: {updated_options}")
+#     return jsonify({"success": True})
+
+
 @app.route('/authenticate', methods=['POST'])
 def authenticate():
     username = request.form['username']

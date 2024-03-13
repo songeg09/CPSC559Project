@@ -7,11 +7,17 @@
     <link rel="stylesheet" href="/static/css/index.css">
 </head>
 <body>
+    {% include 'menu_bar.html' %}
+
     <div id="background"></div>
     <div class="welcome-title"><h1>Welcome to OnVote</h1></div>
     <div class="button-container">
-        <button onclick="window.location.href='/vote_list'">Vote Now!</button>
-        <button onclick="window.location.href='/login'">Login/Logout</button>
+        <button onclick="window.location.href='/votingpage'">Vote Now!</button>
+
+        {% if 'user' not in session %}
+            <button onclick="window.location.href='/login'">Login</button>
+        {% endif %}
+        
         <button onclick="window.location.href='/ballot_list'">View and Create Elections</button>
     </div>
     <script src="/static/js/index.js"></script>
