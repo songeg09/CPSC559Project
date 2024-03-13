@@ -5,6 +5,7 @@ import time
 from flask import Flask, render_template, request, jsonify, send_from_directory, session
 import requests
 from flask import Flask, request, redirect, url_for
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = 'your_secret_key'
@@ -27,29 +28,76 @@ def index():
 def signup():
     return render_template('signup.html')
 
+def submit_registration_to_replica(replica, user_data):
+    try:
+        response = requests.post(replica + "register", data=user_data)
+        if response.status_code != 200:
+            return f"Error from replica {replica}: {response.text}"
+    except requests.exceptions.RequestException as e:
+        return f"Request failed for replica {replica}: {str(e)}"
+    return None  # Return None if there was no error
+
 @app.route('/submit_registration', methods=['POST'])
 def submit_registration():
-    global active_replicas
     user_data = request.form
     errors = []
 
-    with replica_lock:
-        for replica in active_replicas:
-            try:
-                response = requests.post(replica + "register", data=user_data)
-                if response.status_code != 200:
-                    errors.append(f"Error from replica {replica}: {response.text}")
-            except requests.exceptions.RequestException as e:
-                errors.append(f"Request failed for replica {replica}: {str(e)}")
+    with ThreadPoolExecutor(max_workers=len(active_replicas)) as executor:
+        # Initiate all the POST requests concurrently
+        future_to_replica = {executor.submit(submit_registration_to_replica, replica, user_data): replica for replica in active_replicas}
+
+        # As each future completes, check if there was an error
+        for future in as_completed(future_to_replica):
+            error = future.result()
+            if error:
+                errors.append(error)
 
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
     return redirect(url_for('index'))
-    return jsonify({"success": True, "message": "Registration successful"}), 200
 
+def fetch_ballot_list(replica):
+    try:
+        response = requests.get(replica + "ballot_list")
+        if response.status_code == 200:
+            return response.json()  # Assuming each replica returns a list of ballots
+        else:
+            return {"error": f"Error from replica {replica}: {response.text}"}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Request failed for replica {replica}: {str(e)}"}
 
 @app.route('/ballot_list', methods=['GET'])
 def ballot_list():
+    global active_replicas
+    ballots = []
+    errors = []
+
+    with ThreadPoolExecutor(max_workers=len(active_replicas)) as executor:
+        future_to_replica = {executor.submit(fetch_ballot_list, replica): replica for replica in active_replicas}
+        for future in as_completed(future_to_replica):
+            replica = future_to_replica[future]
+            try:
+                data = future.result()
+                if "error" in data:
+                    errors.append(data["error"])
+                else:
+                    ballots.extend(data)
+            except Exception as exc:
+                errors.append(f"Replica {replica} generated an exception: {str(exc)}")
+
+    if errors:
+        return jsonify({"success": False, "errors": errors}), 500
+    # Assuming you have a 'ballot_list.html' template to render ballots
+    return render_template('ballot_list.html', ballots=ballots)
+
+
+@app.route('/ballot_detail/<int:ballot_id>', methods=['GET'])
+def ballot_detail(ballot_id):
+    global active_replicas
+
+
+@app.route('/vote_list', methods=['GET'])
+def vote_list():
     global active_replicas
     ballots = []
     errors = []
@@ -67,39 +115,13 @@ def ballot_list():
 
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
-    # Assuming you have a 'ballot_list.html' template to render ballots
-    return render_template('ballot_list.html', ballots=ballots)
-
-
-@app.route('/ballot_detail/<int:ballot_id>', methods=['GET'])
-def ballot_detail(ballot_id):
-    global active_replicas
-
-
-@app.route('/vote_list', methods=['GET'])
-def vote_list():
-    ballots = []
-    errors = []
-
-    for replica in REPLICA_ADDRESSES:
-        try:
-            response = requests.get(replica + "ballot_list")
-            if response.status_code == 200:
-                ballots.extend(response.json())  # Assuming each replica returns a list of ballots
-            else:
-                errors.append(f"Error from replica {replica}: {response.text}")
-        except requests.exceptions.RequestException as e:
-            errors.append(f"Request failed for replica {replica}: {str(e)}")
-
-    if errors:
-        return jsonify({"success": False, "errors": errors}), 500
     # Assuming you have a 'voting_list.html' template to render ballots
     return render_template('vote_list.html', ballots=ballots)
 
 
 @app.route('/vote_detail/<int:ballot_id>', methods=['GET'])
 def vote_detail(ballot_id):
-
+    global active_replicas
     ballot_data = []
     errors = []
 
