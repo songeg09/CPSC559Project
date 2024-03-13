@@ -139,13 +139,6 @@ def submit_ballot_edit(ballot_id):
         db.session.rollback()  # Rollback in case of error
         return jsonify({"success": False, "message": str(e)}), 500
 
-@app.route('/submit_ballot_edit/<int:ballot_id>', methods=['POST'])
-def submit_ballot_edit(ballot_id):
-    updated_options = request.json.get("options", [])
-    # print debug
-    print(f"Updated options for ballot {ballot_id}: {updated_options}")
-    return jsonify({"success": True})
-
 @app.route('/vote_submit', methods=['POST'])
 def vote_submit():
     option_id = request.form.get('option_id')

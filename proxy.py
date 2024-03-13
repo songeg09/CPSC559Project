@@ -90,13 +90,7 @@ def ballot_list():
     # Assuming you have a 'ballot_list.html' template to render ballots
     return render_template('ballot_list.html', ballots=ballots)
 
-
-@app.route('/ballot_detail/<int:ballot_id>', methods=['GET'])
-def ballot_detail(ballot_id):
-    global active_replicas
-
-
-def fetch_ballot_list_from_replica(replica):
+def fetch_vote_list_from_replica(replica):
     try:
         response = requests.get(replica + "ballot_list")
         if response.status_code == 200:
@@ -113,7 +107,7 @@ def vote_list():
 
     # Use ThreadPoolExecutor to fetch ballot lists concurrently from all active replicas
     with ThreadPoolExecutor(max_workers=len(active_replicas)) as executor:
-        future_to_replica = {executor.submit(fetch_ballot_list_from_replica, replica): replica for replica in active_replicas}
+        future_to_replica = {executor.submit(fetch_vote_list_from_replica, replica): replica for replica in active_replicas}
 
         for future in as_completed(future_to_replica):
             data = future.result()
@@ -138,6 +132,7 @@ def fetch_ballot_detail(replica, ballot_id):
 
 app.route('/vote_detail/<int:ballot_id>', methods=['GET'])
 def vote_detail(ballot_id):
+    global active_replicas
     ballot_data = []
     errors = []
 
