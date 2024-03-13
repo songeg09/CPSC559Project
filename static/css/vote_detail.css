@@ -1,0 +1,103 @@
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to bottom right, #ffffff, #0056b3);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+h2 {
+    color: #255a92;
+    margin-bottom: 20px;
+}
+
+form {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    width: 60%;
+    min-width: 300px; 
+    padding: 30px; 
+}
+
+.option-label {
+    display: block;
+    position: relative;
+    padding-left: 35px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    font-size: 1.25rem;
+    user-select: none;
+    color: #255a92;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+    padding: 15px 35px 15px 60px;
+    margin-bottom: 20px;
+}
+
+.option-label:hover {
+    background-color: #e8f0fe;
+    border-color: #007bff;
+}
+
+.option-label:active,
+.option-label:focus-within {
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.option-label input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 25px;
+    width: 25px;
+    background-color: #eee;
+    border-radius: 50%;
+    transition: background-color 0.3s, box-shadow 0.3s;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 20px;
+}
+
+.option-label input[type="radio"]:checked ~ .checkmark {
+    background-color: #007bff;
+}
+
+.option-label input[type="radio"]:checked ~ .checkmark:after {
+    content: "";
+    position: absolute;
+    display: block;
+    top: 9px;
+    left: 9px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: white;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
