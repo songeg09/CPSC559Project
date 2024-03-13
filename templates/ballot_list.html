@@ -16,7 +16,7 @@
                     <img src="{{ ballot.img_url }}" alt="Ballot Image" class="ballot-img">
                     <span class="ballot-title">{{ ballot.title }}</span>
                 </a>
-                <a href="{}" class="edit-link">Edit</a>
+                <a href="/ballot_edit/{{ ballot.id }}" class="edit-link">Edit</a>
             </li>
         {% endfor %}
     </ul>

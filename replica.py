@@ -96,6 +96,21 @@ def ballot_detail(ballot_id):
 
     return jsonify(ballot_data)
 
+@app.route('/ballot_edit/<int:ballot_id>', methods=['GET'])
+def ballot_edit(ballot_id):
+    ballot = Ballot.query.get(ballot_id)
+    options = BallotOption.query.filter_by(ballot_id=ballot_id).all()
+
+    print(ballot.title)
+
+    ballot_data = {
+        "title": ballot.title,
+        "options": [{"id": option.id, "option_text": option.option_text} for option in options]
+    }
+
+    return jsonify(ballot_data)
+
+
 @app.route('/authenticate', methods=['POST'])
 def authenticate():
     username = request.form['username']
