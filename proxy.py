@@ -126,22 +126,43 @@ def vote_detail(ballot_id):
 def vote_submit():
     return
 
+# @app.route('/ballot_edit/<int:ballot_id>', methods=['GET'])
+# def ballot_edit(ballot_id):
+#     ballot_data = []
+#     errors = []
+
+#     for replica in REPLICA_ADDRESSES:
+#         try:
+#             response = requests.get(f"{replica}/ballot_edit/{ballot_id}")
+#             if response.status_code == 200:
+#                 ballot_data.append(response.json())  # Assuming each replica returns a list of ballots
+#             else:
+#                 errors.append(f"Error from replica {replica}: {response.text}")
+#         except requests.exceptions.RequestException as e:
+#             errors.append(f"Request failed for replica {replica}: {str(e)}")
+
+#     if errors:
+#         return jsonify({"success": False, "errors": errors}), 500
+
+#     ballot_title = ballot_data[0]["title"]
+#     ballot_options = [option for data in ballot_data for option in data['options']]
+
+#     return render_template('ballot_edit.html', title=ballot_title, options=ballot_options)
+
 @app.route('/ballot_edit/<int:ballot_id>', methods=['GET'])
 def ballot_edit(ballot_id):
-    global active_replicas
     ballot_data = []
     errors = []
 
-    with replica_lock:
-        for replica in active_replicas:
-            try:
-                response = requests.get(f"{replica}/ballot_edit/{ballot_id}")
-                if response.status_code == 200:
-                    ballot_data.append(response.json())  # Assuming each replica returns a list of ballots
-                else:
-                    errors.append(f"Error from replica {replica}: {response.text}")
-            except requests.exceptions.RequestException as e:
-                errors.append(f"Request failed for replica {replica}: {str(e)}")
+    for replica in REPLICA_ADDRESSES:
+        try:
+            response = requests.get(f"{replica}/ballot_edit/{ballot_id}")
+            if response.status_code == 200:
+                ballot_data.append(response.json())  # Assuming each replica returns a list of ballots
+            else:
+                errors.append(f"Error from replica {replica}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            errors.append(f"Request failed for replica {replica}: {str(e)}")
 
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
