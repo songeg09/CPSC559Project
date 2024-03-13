@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vote - {{ title }}</title>
+    <link rel="stylesheet" href="/static/css/vote_detail.css">
+</head>
+<body>
+    <h2>{{ title }}</h2>
+    <form action="/vote_submit" method="post">
+        {% for option in options %}
+            <label class="option-label" for="option{{ loop.index }}">
+                {{ option.option_text }}
+                <input type="radio" name="option" id="option{{ loop.index }}" value="{{ option.id }}">
+                <span class="checkmark"></span>
+            </label>
+        {% endfor %}
+        <button type="submit">Vote</button>
+    </form>
+</body>
+</html>
