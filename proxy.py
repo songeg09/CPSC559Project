@@ -106,7 +106,21 @@ def vote_detail(ballot_id):
 
 @app.route('/vote_submit', methods=['POST'])
 def vote_submit():
-    return
+    option_id = request.form.get('option')
+    errors = []
+
+    for replica in REPLICA_ADDRESSES:
+        try:
+            response = requests.post(replica + "/vote_submit", data={'option_id': option_id})
+            if response.status_code != 200:
+                errors.append(f"Error from replica {replica}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            errors.append(f"Request failed for replica {replica}: {str(e)}")
+
+    if errors:
+        return jsonify({"success": False, "errors": errors}), 500
+    return render_template('vote_result.html')
+
 
 @app.route('/ballot_edit/<int:ballot_id>', methods=['GET'])
 def ballot_edit(ballot_id):
