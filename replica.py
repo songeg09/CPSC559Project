@@ -31,6 +31,7 @@ class BallotOption(db.Model):
     ballot_id = db.Column(db.Integer, db.ForeignKey('ballot.id'), nullable=False)
     option_text = db.Column(db.String(250), nullable=False)
     ballot = db.relationship('Ballot', backref=db.backref('options', lazy=True))
+    votes = db.Column(db.Integer, default=0)
 
 @app.before_request
 def create_tables():
@@ -87,8 +88,6 @@ def ballot_detail(ballot_id):
     ballot = Ballot.query.get(ballot_id)
     options = BallotOption.query.filter_by(ballot_id=ballot_id).all()
 
-    print(ballot.title)
-
     ballot_data = {
         "title": ballot.title,
         "options": [{"id": option.id, "option_text": option.option_text} for option in options]
@@ -139,6 +138,23 @@ def submit_ballot_edit(ballot_id):
     except Exception as e:
         db.session.rollback()  # Rollback in case of error
         return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/submit_ballot_edit/<int:ballot_id>', methods=['POST'])
+def submit_ballot_edit(ballot_id):
+    updated_options = request.json.get("options", [])
+    # print debug
+    print(f"Updated options for ballot {ballot_id}: {updated_options}")
+    return jsonify({"success": True})
+
+@app.route('/vote_submit', methods=['POST'])
+def vote_submit():
+    option_id = request.form.get('option_id')
+    option = BallotOption.query.get(option_id)
+
+    option.votes += 1
+    db.session.commit()
+    print(option.votes)
+    return jsonify({"success": True}), 200
 
 @app.route('/authenticate', methods=['POST'])
 def authenticate():
