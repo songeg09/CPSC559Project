@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ballot List</title>
+    <link rel="stylesheet" href="/static/css/ballot_list.css">
+</head>
+<body>
+    <h2>Ballot List</h2>
+    <ul class="ballot-list">
+        {% for ballot in ballots %}
+            <li>
+                <a href="/vote_detail/{{ ballot.id }}" style="display: flex; width: 100%; text-decoration: none; color: inherit;">
+                    <img src="{{ ballot.img_url }}" alt="Ballot Image" class="ballot-img">
+                    <span class="ballot-title">{{ ballot.title }}</span>
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

@@ -48,7 +48,6 @@ def submit_registration():
     return jsonify({"success": True, "message": "Registration successful"}), 200
 
 
-
 @app.route('/ballot_list', methods=['GET'])
 def ballot_list():
     global active_replicas
@@ -71,9 +70,36 @@ def ballot_list():
     # Assuming you have a 'ballot_list.html' template to render ballots
     return render_template('ballot_list.html', ballots=ballots)
 
+
 @app.route('/ballot_detail/<int:ballot_id>', methods=['GET'])
 def ballot_detail(ballot_id):
     global active_replicas
+
+
+@app.route('/vote_list', methods=['GET'])
+def vote_list():
+    ballots = []
+    errors = []
+
+    for replica in REPLICA_ADDRESSES:
+        try:
+            response = requests.get(replica + "ballot_list")
+            if response.status_code == 200:
+                ballots.extend(response.json())  # Assuming each replica returns a list of ballots
+            else:
+                errors.append(f"Error from replica {replica}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            errors.append(f"Request failed for replica {replica}: {str(e)}")
+
+    if errors:
+        return jsonify({"success": False, "errors": errors}), 500
+    # Assuming you have a 'voting_list.html' template to render ballots
+    return render_template('vote_list.html', ballots=ballots)
+
+
+@app.route('/vote_detail/<int:ballot_id>', methods=['GET'])
+def vote_detail(ballot_id):
+
     ballot_data = []
     errors = []
 
@@ -94,7 +120,11 @@ def ballot_detail(ballot_id):
     ballot_title = ballot_data[0]["title"]
     ballot_options = [option for data in ballot_data for option in data['options']]
 
-    return render_template('ballot_detail.html', title=ballot_title, options=ballot_options)
+    return render_template('vote_detail.html', title=ballot_title, options=ballot_options)
+
+@app.route('/vote_submit', methods=['POST'])
+def vote_submit():
+    return
 
 @app.route('/ballot_edit/<int:ballot_id>', methods=['GET'])
 def ballot_edit(ballot_id):
