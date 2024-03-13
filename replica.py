@@ -101,14 +101,19 @@ def ballot_edit(ballot_id):
     ballot = Ballot.query.get(ballot_id)
     options = BallotOption.query.filter_by(ballot_id=ballot_id).all()
 
+
     print(ballot.title)
+
 
     ballot_data = {
         "title": ballot.title,
         "options": [{"id": option.id, "option_text": option.option_text} for option in options]
     }
 
+
     return jsonify(ballot_data)
+
+
 
 
 @app.route('/submit_ballot_edit/<int:ballot_id>', methods=['POST'])
@@ -117,6 +122,27 @@ def submit_ballot_edit(ballot_id):
     # print debug
     print(f"Updated options for ballot {ballot_id}: {updated_options}")
     return jsonify({"success": True})
+# @app.route('/ballot_edit/<int:ballot_id>', methods=['GET'])
+# def ballot_edit(ballot_id):
+#     ballot = Ballot.query.get(ballot_id)
+#     options = BallotOption.query.filter_by(ballot_id=ballot_id).all()
+
+#     print(ballot.title)
+
+#     ballot_data = {
+#         "title": ballot.title,
+#         "options": [{"id": option.id, "option_text": option.option_text} for option in options]
+#     }
+
+#     return jsonify(ballot_data)
+
+
+# @app.route('/submit_ballot_edit/<int:ballot_id>', methods=['POST'])
+# def submit_ballot_edit(ballot_id):
+#     updated_options = request.json.get("options", [])
+#     # print debug
+#     print(f"Updated options for ballot {ballot_id}: {updated_options}")
+#     return jsonify({"success": True})
 
 # @app.route('/ballot_edit/<int:ballot_id>', methods=['GET'])
 # def ballot_edit(ballot_id):

@@ -193,44 +193,67 @@ def vote_submit():
 
 #     return render_template('ballot_edit.html', title=ballot_title, options=ballot_options)
 
-def fetch_ballot_edit(replica, ballot_id):
-    try:
-        response = requests.get(f"{replica}/ballot_edit/{ballot_id}")
-        if response.status_code == 200:
-            return response.json()  # Return the JSON response from the replica
-        else:
-            return {"error": f"Error from replica {replica}: {response.text}"}
-    except requests.exceptions.RequestException as e:
-        return {"error": f"Request failed for replica {replica}: {str(e)}"}
-
-
 @app.route('/ballot_edit/<int:ballot_id>', methods=['GET'])
 def ballot_edit(ballot_id):
-    ballot_data = []
-    errors = []
-
-    with ThreadPoolExecutor(max_workers=len(REPLICA_ADDRESSES)) as executor:
-        future_to_replica = {executor.submit(fetch_ballot_edit, replica, ballot_id): replica for replica in REPLICA_ADDRESSES}
-        
-        for future in as_completed(future_to_replica):
-            data = future.result()
-            if "error" in data:
-                errors.append(data["error"])
-            else:
-                ballot_data.append(data)
-
-    if errors:
-        return jsonify({"success": False, "errors": errors}), 500
-
-    if ballot_data:
-        # Assuming the first successful response has the needed data structure
-        ballot_title = ballot_data[0].get("title", "")
-        ballot_options = [option for data in ballot_data for option in data.get('options', [])]
-
-        return render_template('ballot_edit.html', title=ballot_title, options=ballot_options)
+    response = requests.get(f"{REPLICA_ADDRESSES[0]}ballot_edit/{ballot_id}")
+    if response.status_code == 200:
+        ballot_data = response.json()
+        return render_template('ballot_edit.html', ballot_id=ballot_id, title=ballot_data["title"], options=ballot_data["options"])
     else:
-        # Handle the case where no valid ballot data is received
-        return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
+        return "Error fetching ballot data", 500
+
+
+@app.route('/submit_ballot_edit/<int:ballot_id>', methods=['POST'])
+def submit_ballot_edit(ballot_id):
+    updated_options = []
+    for key, value in request.form.items():
+        if key.startswith('option_'):
+            option_id = key.split('_')[1]
+            updated_options.append({"id": int(option_id), "option_text": value})
+   
+    response = requests.post(f"{REPLICA_ADDRESSES[0]}submit_ballot_edit/{ballot_id}", json={"options": updated_options})
+    if response.status_code == 200:
+        return redirect(url_for('ballot_edit', ballot_id=ballot_id))
+    else:
+        return "Error updating ballot", 500
+# def fetch_ballot_edit(replica, ballot_id):
+#     try:
+#         response = requests.get(f"{replica}/ballot_edit/{ballot_id}")
+#         if response.status_code == 200:
+#             return response.json()  # Return the JSON response from the replica
+#         else:
+#             return {"error": f"Error from replica {replica}: {response.text}"}
+#     except requests.exceptions.RequestException as e:
+#         return {"error": f"Request failed for replica {replica}: {str(e)}"}
+
+
+# @app.route('/ballot_edit/<int:ballot_id>', methods=['GET'])
+# def ballot_edit(ballot_id):
+#     ballot_data = []
+#     errors = []
+
+#     with ThreadPoolExecutor(max_workers=len(REPLICA_ADDRESSES)) as executor:
+#         future_to_replica = {executor.submit(fetch_ballot_edit, replica, ballot_id): replica for replica in REPLICA_ADDRESSES}
+        
+#         for future in as_completed(future_to_replica):
+#             data = future.result()
+#             if "error" in data:
+#                 errors.append(data["error"])
+#             else:
+#                 ballot_data.append(data)
+
+#     if errors:
+#         return jsonify({"success": False, "errors": errors}), 500
+
+#     if ballot_data:
+#         # Assuming the first successful response has the needed data structure
+#         ballot_title = ballot_data[0].get("title", "")
+#         ballot_options = [option for data in ballot_data for option in data.get('options', [])]
+
+#         return render_template('ballot_edit.html', title=ballot_title, options=ballot_options)
+#     else:
+#         # Handle the case where no valid ballot data is received
+#         return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
 
 
 @app.route('/votingpage')
