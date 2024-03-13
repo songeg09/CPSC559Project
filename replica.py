@@ -113,53 +113,32 @@ def ballot_edit(ballot_id):
 
     return jsonify(ballot_data)
 
-
-
-
 @app.route('/submit_ballot_edit/<int:ballot_id>', methods=['POST'])
 def submit_ballot_edit(ballot_id):
+    # Assuming updated_options is a list of dicts with 'id' and 'option_text'
     updated_options = request.json.get("options", [])
-    # print debug
-    print(f"Updated options for ballot {ballot_id}: {updated_options}")
-    return jsonify({"success": True})
-# @app.route('/ballot_edit/<int:ballot_id>', methods=['GET'])
-# def ballot_edit(ballot_id):
-#     ballot = Ballot.query.get(ballot_id)
-#     options = BallotOption.query.filter_by(ballot_id=ballot_id).all()
 
-#     print(ballot.title)
+    try:
+        # Iterate through the updated options
+        for option_update in updated_options:
+            option_id = option_update.get("id")
+            new_text = option_update.get("option_text")
 
-#     ballot_data = {
-#         "title": ballot.title,
-#         "options": [{"id": option.id, "option_text": option.option_text} for option in options]
-#     }
+            # Fetch the existing option from the database
+            option = BallotOption.query.filter_by(id=option_id, ballot_id=ballot_id).first()
+            if option:
+                # Update the option text
+                option.option_text = new_text
+            else:
+                return jsonify({"success": False, "message": f"Option with ID {option_id} not found"}), 404
+        
+        # Commit the changes to the database
+        db.session.commit()
 
-#     return jsonify(ballot_data)
-
-
-# @app.route('/submit_ballot_edit/<int:ballot_id>', methods=['POST'])
-# def submit_ballot_edit(ballot_id):
-#     updated_options = request.json.get("options", [])
-#     # print debug
-#     print(f"Updated options for ballot {ballot_id}: {updated_options}")
-#     return jsonify({"success": True})
-
-# @app.route('/ballot_edit/<int:ballot_id>', methods=['GET'])
-# def ballot_edit(ballot_id):
-#     # Simulated data retrieval
-#     ballot_data = {
-#         "title": "Example Ballot",
-#         "options": [{"id": 1, "option_text": "Option 1"}, {"id": 2, "option_text": "Option 2"}]
-#     }
-#     return jsonify(ballot_data)
-
-# @app.route('/submit_ballot_edit/<int:ballot_id>', methods=['POST'])
-# def submit_ballot_edit(ballot_id):
-#     updated_options = request.json.get("options", [])
-#     # Here, you'd update the options in the database based on updated_options
-#     print(f"Updated options for ballot {ballot_id}: {updated_options}")
-#     return jsonify({"success": True})
-
+        return jsonify({"success": True, "message": "Ballot options updated successfully"}), 200
+    except Exception as e:
+        db.session.rollback()  # Rollback in case of error
+        return jsonify({"success": False, "message": str(e)}), 500
 
 @app.route('/authenticate', methods=['POST'])
 def authenticate():
