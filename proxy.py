@@ -54,7 +54,7 @@ def submit_registration():
 
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
-    return redirect(url_for('index'))
+    return redirect(url_for('login'))
 
 def fetch_ballot_list(replica):
     try:
