@@ -12,8 +12,10 @@
     <ul class="ballot-list">
         {% for ballot in ballots %}
             <li>
-                <img src="{{ ballot.img_url }}" alt="Ballot Image" class="ballot-img">
-                <span class="ballot-title">{{ ballot.title }}</span>
+                <a href="/ballot_detail/{{ ballot.id }}" style="display: flex; width: 100%; text-decoration: none; color: inherit;">
+                    <img src="{{ ballot.img_url }}" alt="Ballot Image" class="ballot-img">
+                    <span class="ballot-title">{{ ballot.title }}</span>
+                </a>
                 <a href="{}" class="edit-link">Edit</a>
             </li>
         {% endfor %}
