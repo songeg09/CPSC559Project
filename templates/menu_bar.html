@@ -8,10 +8,10 @@
 </head>
 <body>
     <div class="menu-bar">
-        <button onclick="window.location.href='/'">Return to Home Page</button>
+        <button onclick="window.location.href='/'">&#127968; Home</button>
 
         {% if 'user' in session %}
-            <button onclick="window.location.href='/logout'">Logout</button>
+            <button class="logout" onclick="window.location.href='/logout'">Logout</button>
         {% endif %}
 
     </div>

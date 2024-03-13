@@ -11,46 +11,33 @@ body {
     background: linear-gradient(to bottom right, #ffffff, #0056b3);
 }
 
-#background {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: -1;
-    overflow: hidden;
-}
-
-.bar {
-    position: absolute;
-    bottom: 0;
-    width: 20px;
-    background: rgba(0, 38, 255, 0.5); 
-    transition: height 0.08s, background-color 0.1s;
-}
-
-.welcome-title {
-    text-align: center;
-    font-size: 2.25rem; 
-    color: #255a92;
-    margin-bottom: 1.25rem; 
-}
-
-.button-container {
+.menu-bar {
     display: flex;
-    flex-direction: grid;
+    justify-content: space-around; /* Adjust the spacing based on your preference */
     align-items: center;
-    margin-top: 20px;
+    width: 100%;
+    padding: 10px; /* Add some padding for better spacing */
+    position: fixed;
+    top: 0; /* Align to the top of the screen */
+    z-index: 1000; /* Set a high z-index to ensure it's on top of other elements */
 }
 
-.button-container button {
+.menu-bar button {
     background-color: #007bff;
     color: #fff;
     cursor: pointer;
     border-radius: 20px;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
     border: none;
-    margin: 10px;
     padding: 10px 20px;
     font-size: 16px;
+    transition: background-color 0.3s; /* Add a transition effect for a smoother hover */
+}
+
+.menu-bar button:hover {
+    background-color: #0056b3; /* Change the background color on hover */
+}
+
+.menu-bar button.logout {
+    background-color: #ff0000; /* Red color for the logout button */
 }
