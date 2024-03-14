@@ -143,11 +143,19 @@ def submit_ballot_edit(ballot_id):
 def vote_submit():
     option_id = request.form.get('option_id')
     option = BallotOption.query.get(option_id)
+    ballot = Ballot.query.filter_by(id=option.ballot_id).first()
+    options = BallotOption.query.filter_by(ballot_id=ballot.id).all()
 
     option.votes += 1
     db.session.commit()
-    print(option.votes)
-    return jsonify({"success": True}), 200
+    
+    ballot_data = {
+        "title": ballot.title,
+        "ballot_id":ballot.id,
+        "options": [{"id": option.id, "option_text": option.option_text, "votes":option.votes} for option in options]
+    }
+
+    return jsonify(ballot_data)
 
 @app.route('/authenticate', methods=['POST'])
 def authenticate():

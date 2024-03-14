@@ -1,1 +1,18 @@
-Vote Result Page
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results - {{ title }}</title>
+    <link rel="stylesheet" href="/static/css/vote_result.css">
+</head>
+<body>
+    <h1>{{ title }}</h1>
+    <ul>
+        {% for option in options %}
+            <li>{{ option.option_text }} -- {{ option.votes }} vote</li>
+        {% endfor %}
+    </ul>
+    <a href="/vote_detail/{{ ballot_id }}" class="button">Vote Again?</a>
+    </body>
+</html>
