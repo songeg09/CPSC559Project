@@ -164,22 +164,47 @@ def vote_detail(ballot_id):
         # Handle case where no valid ballot data is received
         return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
 
+def fetch_vote_submit(replica, option_id):
+    try:
+        response = requests.post(replica + "/vote_submit", data={'option_id': option_id})
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"error": f"Error from replica {replica}: {response.text}"}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Request failed for replica {replica}: {str(e)}"}
+
 @app.route('/vote_submit', methods=['POST'])
 def vote_submit():
     option_id = request.form.get('option')
     errors = []
+    ballot_data = []
 
-    for replica in REPLICA_ADDRESSES:
-        try:
-            response = requests.post(replica + "/vote_submit", data={'option_id': option_id})
-            if response.status_code != 200:
-                errors.append(f"Error from replica {replica}: {response.text}")
-        except requests.exceptions.RequestException as e:
-            errors.append(f"Request failed for replica {replica}: {str(e)}")
-
+    with ThreadPoolExecutor(max_workers=len(active_replicas)) as executor:
+        # Create a future for each replica
+        future_to_replica = {executor.submit(fetch_vote_submit, replica, option_id): replica for replica in active_replicas}
+    
+        # As each future completes, process its result
+        for future in as_completed(future_to_replica):
+            data = future.result()
+            if "error" in data:
+                errors.append(data["error"])
+            else:
+                ballot_data.append(data)
+    
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
-    return render_template('vote_result.html')
+
+    # Assume the first successful response has the needed data structure
+    if ballot_data:
+        ballot_title = ballot_data[0].get("title", "")
+        ballot_id = ballot_data[0].get("ballot_id", "")
+        ballot_options = [option for data in ballot_data for option in data.get('options', [])]
+
+        return render_template('vote_result.html',ballot_id = ballot_id, title=ballot_title, options=ballot_options)
+    else:
+        # Handle case where no valid ballot data is received
+        return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
 
 
 def fetch_ballot_from_replica(replica, ballot_id):
