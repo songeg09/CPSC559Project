@@ -5,8 +5,8 @@ body {
     padding: 0;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    justify-content: center; 
+    align-items: center; 
     height: 100vh;
     background: linear-gradient(to bottom right, #ffffff, #0056b3);
 }
@@ -31,16 +31,20 @@ body {
 
 .welcome-title {
     text-align: center;
-    font-size: 2.25rem; 
-    color: #255a92;
-    margin-bottom: 1.25rem; 
+    font-size: 2.25rem;
+    color: #313cce;
+    font-weight: bold;
+    font-family: 'Lato', sans-serif;
+    opacity: 0;
+    animation: slideUpAndFadeIn 0.2s ease-out forwards;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); 
+    margin-top: -80px;
 }
 
 .button-container {
     display: flex;
     flex-direction: grid;
     align-items: center;
-    margin-top: 20px;
 }
 
 .button-container button {
@@ -53,4 +57,52 @@ body {
     margin: 10px;
     padding: 10px 20px;
     font-size: 16px;
+    transition: background-color 0.3s ease; 
+}
+
+.button-container button:hover {
+    background-color: #0056b3; 
+}
+
+.logo-and-welcome {
+    margin-top: -100px;
+    display: flex;
+    flex-direction: column; 
+    align-items: center;
+    width: 100%; 
+}
+
+#logo {
+    margin-top: -40px;
+    max-width: 240px;
+    height: auto;
+}
+
+.animation-container {
+    position: relative;
+    font-size: 48px; 
+    height: 50px; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.ballot-box {
+    animation: fadeIn 2s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.welcome-title {
+    opacity: 0;
+    animation: slideUpAndFadeIn 2s 1s ease-out forwards;
+}
+
+@keyframes slideUpAndFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }

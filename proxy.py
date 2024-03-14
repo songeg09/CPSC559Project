@@ -6,6 +6,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory,
 import requests
 from flask import Flask, request, redirect, url_for
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = 'your_secret_key'
@@ -53,7 +54,9 @@ def submit_registration():
                 errors.append(error)
 
     if errors:
-        return jsonify({"success": False, "errors": errors}), 500
+        flash({"Signup failed": errors})
+        return redirect(url_for('signup')) 
+        # return jsonify({"success": False, "errors": errors}), 500
     return redirect(url_for('login'))
 
 def fetch_ballot_list(replica):
@@ -307,7 +310,9 @@ def login():
                     return redirect(url_for('index'))
 
         # If no replicas authenticate the user, return a login failed message
-        return jsonify({"success": False, "message": "Login failed"}), 401
+        # return jsonify({"success": False, "message": "Login failed"}), 401
+        flash('Login failed. Please try again.')
+        return redirect(url_for('login'))        
     else:
         # Serve the login page for GET requests
         return render_template('login.html')
