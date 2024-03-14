@@ -163,6 +163,37 @@ def vote_detail(ballot_id):
     else:
         # Handle case where no valid ballot data is received
         return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
+    
+@app.route('/ballot_detail/<int:ballot_id>', methods=['GET'])
+def ballot_detail(ballot_id):
+    global active_replicas
+    ballot_data = []
+    errors = []
+
+    with ThreadPoolExecutor(max_workers=len(active_replicas)) as executor:
+        # Create a future for each replica
+        future_to_replica = {executor.submit(fetch_ballot_detail, replica, ballot_id): replica for replica in active_replicas}
+
+        # As each future completes, process its result
+        for future in as_completed(future_to_replica):
+            data = future.result()
+            if "error" in data:
+                errors.append(data["error"])
+            else:
+                ballot_data.append(data)
+
+    if errors:
+        return jsonify({"success": False, "errors": errors}), 500
+
+    # Assume the first successful response has the needed data structure
+    if ballot_data:
+        ballot_title = ballot_data[0].get("title", "")
+        ballot_options = [option for data in ballot_data for option in data.get('options', [])]
+
+        return render_template('ballot_detail.html', title=ballot_title, options=ballot_options)
+    else:
+        # Handle case where no valid ballot data is received
+        return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
 
 @app.route('/vote_submit', methods=['POST'])
 def vote_submit():
@@ -216,6 +247,7 @@ def update_ballot_at_replica(replica, ballot_id, updated_options):
     except requests.exceptions.RequestException as e:
         return f"Request failed for replica {replica}: {str(e)}"
     return None  # Return None if there was no error
+
 
 
 @app.route('/submit_ballot_edit/<int:ballot_id>', methods=['POST'])

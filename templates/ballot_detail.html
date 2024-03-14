@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ballot Detail</title>
+    <link rel="stylesheet" href="/static/css/ballot_detail.css"> <!-- Make sure this CSS file exists -->
+</head>
+<body>
+    {% include 'menu_bar.html' %}
+
+    <h1>{{ title }}</h1>
+    <div class="options-container">
+        <ul style="list-style-type: none;">
+            {% for option in options %}
+            <li>
+                <span class="option-label">Option {{ loop.index }}:</span>
+                <span class="option-text">{{ option.option_text }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>
+
