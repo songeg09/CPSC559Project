@@ -16,6 +16,10 @@ REPLICA_ADDRESSES = [
     # Add other replicas as needed
 ]
 
+PRIMARY_PROXY_URL = "http://127.0.0.1:5000/heartbeat"  # URL to check the heartbeat of the primary proxy
+HEARTBEAT_INTERVAL = 5  # Interval in seconds between heartbeat checks
+MAX_FAILED_ATTEMPTS = 3  # Number of failed heartbeat attempts before initiating failover
+
 active_replicas = REPLICA_ADDRESSES.copy()  # Start with all replicas considered active
 replica_lock = Lock()  # Lock for thread-safe operations on the active_replicas list
 inactive_replicas = []  # List to keep track of downed replicas
@@ -399,11 +403,31 @@ def check_replica_health():
 
         time.sleep(60)  # Check every 60 seconds
 
-@app.route('/heartbeat')
-def heartbeat():
-    return jsonify({"status": "alive"}), 200
+def check_primary_proxy():
+    failed_attempts = 0
+    while True:
+        try:
+            response = requests.get(PRIMARY_PROXY_URL, timeout=2)  # Short timeout for heartbeat
+            if response.status_code == 200:
+                print("Primary proxy is alive.")
+                failed_attempts = 0  # Reset failed attempts counter
+            else:
+                print("Heartbeat check failed with status code:", response.status_code)
+                failed_attempts += 1
+        except requests.exceptions.RequestException as e:
+            print("Heartbeat check failed:", e)
+            failed_attempts += 1
+        
+        if failed_attempts >= MAX_FAILED_ATTEMPTS:
+            print("Primary proxy is down.")
+            return False  # Indicate that failover should be initiated
+
+        time.sleep(HEARTBEAT_INTERVAL)
 
 if __name__ == '__main__':
-    threading.Thread(target=check_replica_health, daemon=True).start()
-    app.run(port=5000)
+    #check heartbeat
+    if not check_primary_proxy():
+        #if heartbeat not found start this proxy
+        threading.Thread(target=check_replica_health, daemon=True).start()
+        app.run(port=5000)
     
