@@ -12,6 +12,9 @@
     <div id="background"></div>
     <div class="register-container">
         <form action="/submit_registration" method="POST">
+            {% for message in get_flashed_messages() %}
+            <div class="alert">{{ message }}</div>
+            {% endfor %}
             <p>User name</p>
             <input name="username" type="text" placeholder="Enter your username">
             <p>Password</p>
