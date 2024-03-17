@@ -80,13 +80,16 @@ def ballot_list():
 
     with ThreadPoolExecutor(max_workers=len(active_replicas)) as executor:
         future_to_replica = {executor.submit(fetch_ballot_list, replica): replica for replica in active_replicas}
+        
         done, _ = wait(future_to_replica.keys(), return_when=FIRST_COMPLETED)
+        
         for future in done:
             data = future.result()
             if "error" in data:
                 errors.append(data["error"])
             else:
                 ballots.extend(data)
+
         # for future in as_completed(future_to_replica):
         #     replica = future_to_replica[future]
         #     try:
