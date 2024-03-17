@@ -111,13 +111,20 @@ def vote_list():
     # Use ThreadPoolExecutor to fetch ballot lists concurrently from all active replicas
     with ThreadPoolExecutor(max_workers=len(active_replicas)) as executor:
         future_to_replica = {executor.submit(fetch_vote_list_from_replica, replica): replica for replica in active_replicas}
-
-        for future in as_completed(future_to_replica):
+         # Use wait with FIRST_COMPLETED to return as soon as the first successful response is received
+        done, _ = wait(future_to_replica.values(), return_when=FIRST_COMPLETED)
+        for future in done:
             data = future.result()
             if "error" in data:
                 errors.append(data["error"])
             else:
                 ballots.extend(data)
+        # for future in as_completed(future_to_replica):
+        #     data = future.result()
+        #     if "error" in data:
+        #         errors.append(data["error"])
+        #     else:
+        #         ballots.extend(data)
 
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
@@ -136,22 +143,22 @@ def fetch_ballot_detail(replica, ballot_id):
 @app.route('/vote_detail/<int:ballot_id>', methods=['GET'])
 def vote_detail(ballot_id):
     global active_replicas
-    ballot_data = []
-    errors = []
+    # ballot_data = []
+    # errors = []
 
     with ThreadPoolExecutor(max_workers=len(active_replicas)) as executor:
         # Create a future for each replica
         future_to_replica = {executor.submit(fetch_ballot_detail, replica, ballot_id): replica for replica in active_replicas}
         
         # Use wait with FIRST_COMPLETED to return as soon as the first successful response is received
-        done, _ = wait(future_to_replica.values(), return_when=FIRST_COMPLETED)  # Make sure to pass futures.values() to wait
+        done, _ = wait(future_to_replica.values(), return_when=FIRST_COMPLETED)
 
         # Check the completed futures for a successful response
         for future in done:
             data = future.result()
             if "error" not in data:
                 # Found successful data response, return this to the frontend
-                return render_template('ballot_detail.html', title=data.get("title", ""), options=data.get('options', []))
+                return render_template('vote_detail.html', title=data.get("title", ""), options=data.get('options', []))
             else:
                 # Log the error, you can also accumulate errors if needed
                 print(data["error"])
