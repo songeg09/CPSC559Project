@@ -83,8 +83,10 @@ def ballot_list():
                 data = future.result()
                 if "error" in data:
                     errors.append(data["error"])
+                    continue
                 else:
                     ballots.extend(data)
+                    break
             except Exception as exc:
                 errors.append(f"Replica {replica} generated an exception: {str(exc)}")
 
@@ -116,8 +118,10 @@ def vote_list():
             data = future.result()
             if "error" in data:
                 errors.append(data["error"])
+                continue
             else:
                 ballots.extend(data)
+                break
 
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
@@ -143,42 +147,29 @@ def vote_detail(ballot_id):
         # Create a future for each replica
         future_to_replica = {executor.submit(fetch_ballot_detail, replica, ballot_id): replica for replica in active_replicas}
         
-        # Use wait with FIRST_COMPLETED to return as soon as the first successful response is received
-        done, _ = wait(future_to_replica.values(), return_when=FIRST_COMPLETED)  # Make sure to pass futures.values() to wait
-
-        # Check the completed futures for a successful response
-        for future in done:
+        # As each future completes, process its result
+        for future in as_completed(future_to_replica):
             data = future.result()
-            if "error" not in data:
-                # Found successful data response, return this to the frontend
-                return render_template('ballot_detail.html', title=data.get("title", ""), options=data.get('options', []))
+            if "error" in data:
+                errors.append(data["error"])
+                continue
             else:
-                # Log the error, you can also accumulate errors if needed
-                print(data["error"])
-                # Handle case where no valid ballot data is received
-                return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
+                ballot_data.append(data)
+                break
 
-        # # As each future completes, process its result
-        # for future in as_completed(future_to_replica):
-        #     data = future.result()
-        #     if "error" in data:
-        #         errors.append(data["error"])
-        #     else:
-        #         ballot_data.append(data)
+    if errors:
+        return jsonify({"success": False, "errors": errors}), 500
 
-    # if errors:
-    #     return jsonify({"success": False, "errors": errors}), 500
+    # Assume the first successful response has the needed data structure
+    if ballot_data:
+        ballot_title = ballot_data[0].get("title", "")
+        ballot_options = ballot_data[0].get('options', [])
+        # ballot_options = [option for data in ballot_data[0] for option in data.get('options', [])]
 
-    # # Assume the first successful response has the needed data structure
-    # if ballot_data:
-    #     ballot_title = ballot_data[0].get("title", "")
-    #     ballot_options = ballot_data[0].get('options', [])
-    #     # ballot_options = [option for data in ballot_data[0] for option in data.get('options', [])]
-
-    #     return render_template('vote_detail.html', title=ballot_title, options=ballot_options)
-    # else:
-    #     # Handle case where no valid ballot data is received
-    #     return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
+        return render_template('vote_detail.html', title=ballot_title, options=ballot_options)
+    else:
+        # Handle case where no valid ballot data is received
+        return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
     
 @app.route('/ballot_detail/<int:ballot_id>', methods=['GET'])
 def ballot_detail(ballot_id):
@@ -195,8 +186,10 @@ def ballot_detail(ballot_id):
             data = future.result()
             if "error" in data:
                 errors.append(data["error"])
+                continue
             else:
                 ballot_data.append(data)
+                break
 
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
@@ -236,8 +229,10 @@ def vote_submit():
             data = future.result()
             if "error" in data:
                 errors.append(data["error"])
+                continue
             else:
                 ballot_data.append(data)
+                break
     
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
