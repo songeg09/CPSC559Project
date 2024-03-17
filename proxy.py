@@ -15,7 +15,7 @@ REPLICA_ADDRESSES = [
     'http://127.0.0.1:5001/',
     'http://24.64.172.31:5001/',
     'http://174.0.252.58:5001/',
-    'http://137.186.166.119:5001',
+    'http://137.186.166.119:5001/',
     # 'http://localhost:5002/',
     # Add other replicas as needed
 ]
@@ -115,7 +115,7 @@ def vote_list():
     with ThreadPoolExecutor(max_workers=len(active_replicas)) as executor:
         future_to_replica = {executor.submit(fetch_vote_list_from_replica, replica): replica for replica in active_replicas}
          # Use wait with FIRST_COMPLETED to return as soon as the first successful response is received
-        done, _ = wait(future_to_replica.values(), return_when=FIRST_COMPLETED)
+        done, _ = wait(future_to_replica.keys(), return_when=FIRST_COMPLETED)
         for future in done:
             data = future.result()
             if "error" in data:
