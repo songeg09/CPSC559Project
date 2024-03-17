@@ -251,7 +251,7 @@ def vote_submit():
         # Create a future for each replica
         future_to_replica = {executor.submit(fetch_vote_submit, replica, option_id): replica for replica in active_replicas}
     
-        done, _ = wait(future_to_replica.values(), return_when=FIRST_COMPLETED)
+        done, _ = wait(future_to_replica.keys(), return_when=FIRST_COMPLETED)
 
         for future in done:
             data = future.result()
