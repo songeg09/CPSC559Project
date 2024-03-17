@@ -157,7 +157,8 @@ def vote_detail(ballot_id):
     # Assume the first successful response has the needed data structure
     if ballot_data:
         ballot_title = ballot_data[0].get("title", "")
-        ballot_options = [option for data in ballot_data for option in data.get('options', [])]
+        ballot_options = ballot_data[0].get('options', [])
+        # ballot_options = [option for data in ballot_data[0] for option in data.get('options', [])]
 
         return render_template('vote_detail.html', title=ballot_title, options=ballot_options)
     else:
