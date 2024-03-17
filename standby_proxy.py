@@ -401,7 +401,7 @@ def check_replica_health():
             except requests.exceptions.RequestException:
                 pass  # If the replica is still down, leave it in the inactive list
 
-        time.sleep(60)  # Check every 60 seconds
+        time.sleep(5)  # Check every 60 seconds
 
 def check_primary_proxy():
     failed_attempts = 0
