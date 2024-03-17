@@ -13,9 +13,9 @@ app.secret_key = 'your_secret_key'
 # List of replicas
 REPLICA_ADDRESSES = [
     'http://127.0.0.1:5001/',
-    'http://24.64.172.31:5001/',
-    'http://174.0.252.58:5001/',
-    'http://137.186.166.119:5001/',
+    #'http://24.64.172.31:5001/',
+    #'http://174.0.252.58:5001/',
+    #'http://137.186.166.119:5001/',
     # 'http://localhost:5002/',
     # Add other replicas as needed
 ]
@@ -209,9 +209,9 @@ def ballot_detail(ballot_id):
     with ThreadPoolExecutor(max_workers=len(active_replicas)) as executor:
         # Create a future for each replica
         future_to_replica = {executor.submit(fetch_ballot_detail, replica, ballot_id): replica for replica in active_replicas}
-
+        done, _ = wait(future_to_replica.keys(), return_when=FIRST_COMPLETED)
         # As each future completes, process its result
-        for future in as_completed(future_to_replica):
+        for future in done:
             data = future.result()
             if "error" in data:
                 errors.append(data["error"])
