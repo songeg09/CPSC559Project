@@ -194,4 +194,4 @@ def heartbeat():
     return jsonify({"status": "alive"}), 200
 
 if __name__ == '__main__':
-    app.run(port=5001)  # Run different instances on different ports.
+    app.run(host = '0.0.0.0', port=5001)  # Run different instances on different ports.

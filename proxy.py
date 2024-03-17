@@ -467,5 +467,5 @@ def heartbeat():
 
 if __name__ == '__main__':
     threading.Thread(target=check_replica_health, daemon=True).start()
-    app.run(port=5000)
+    app.run(host='0.0.0.0', port=5000)
     
