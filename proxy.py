@@ -154,7 +154,7 @@ def vote_detail(ballot_id):
         future_to_replica = {executor.submit(fetch_ballot_detail, replica, ballot_id): replica for replica in active_replicas}
         
         # Use wait with FIRST_COMPLETED to return as soon as the first successful response is received
-        done, _ = wait(future_to_replica.values(), return_when=FIRST_COMPLETED)
+        done, _ = wait(future_to_replica.keys(), return_when=FIRST_COMPLETED)
 
         # Check the completed futures for a successful response
         for future in done:
