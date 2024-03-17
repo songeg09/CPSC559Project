@@ -90,16 +90,7 @@ def ballot_list():
             else:
                 ballots.extend(data)
 
-        # for future in as_completed(future_to_replica):
-        #     replica = future_to_replica[future]
-        #     try:
-        #         data = future.result()
-        #         if "error" in data:
-        #             errors.append(data["error"])
-        #         else:
-        #             ballots.extend(data)
-        #     except Exception as exc:
-        #         errors.append(f"Replica {replica} generated an exception: {str(exc)}")
+            break
 
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
@@ -132,12 +123,8 @@ def vote_list():
                 errors.append(data["error"])
             else:
                 ballots.extend(data)
-        # for future in as_completed(future_to_replica):
-        #     data = future.result()
-        #     if "error" in data:
-        #         errors.append(data["error"])
-        #     else:
-        #         ballots.extend(data)
+            
+            break
 
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
@@ -177,28 +164,6 @@ def vote_detail(ballot_id):
                 print(data["error"])
                 # Handle case where no valid ballot data is received
                 return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
-
-        # # As each future completes, process its result
-        # for future in as_completed(future_to_replica):
-        #     data = future.result()
-        #     if "error" in data:
-        #         errors.append(data["error"])
-        #     else:
-        #         ballot_data.append(data)
-
-    # if errors:
-    #     return jsonify({"success": False, "errors": errors}), 500
-
-    # # Assume the first successful response has the needed data structure
-    # if ballot_data:
-    #     ballot_title = ballot_data[0].get("title", "")
-    #     ballot_options = ballot_data[0].get('options', [])
-    #     # ballot_options = [option for data in ballot_data[0] for option in data.get('options', [])]
-
-    #     return render_template('vote_detail.html', title=ballot_title, options=ballot_options)
-    # else:
-    #     # Handle case where no valid ballot data is received
-    #     return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
     
 @app.route('/ballot_detail/<int:ballot_id>', methods=['GET'])
 def ballot_detail(ballot_id):
@@ -217,6 +182,8 @@ def ballot_detail(ballot_id):
                 errors.append(data["error"])
             else:
                 ballot_data.append(data)
+
+            break
 
     if errors:
         return jsonify({"success": False, "errors": errors}), 500
@@ -263,30 +230,8 @@ def vote_submit():
                 print(data["error"])
                 # Handle case where no valid ballot data is received
                 return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
-
-
-    #     # As each future completes, process its result
-    #     for future in as_completed(future_to_replica):
-    #         data = future.result()
-    #         if "error" in data:
-    #             errors.append(data["error"])
-    #         else:
-    #             ballot_data.append(data)
-    
-    # if errors:
-    #     return jsonify({"success": False, "errors": errors}), 500
-
-    # # Assume the first successful response has the needed data structure
-    # if ballot_data:
-    #     ballot_title = ballot_data[0].get("title", "")
-    #     ballot_id = ballot_data[0].get("ballot_id", "")
-    #     ballot_options = [option for data in ballot_data for option in data.get('options', [])]
-
-    #     return render_template('vote_result.html',ballot_id = ballot_id, title=ballot_title, options=ballot_options)
-    # else:
-    #     # Handle case where no valid ballot data is received
-    #     return jsonify({"success": False, "message": "No valid ballot data received from any replica"}), 500
-
+            
+            break
 
 def fetch_ballot_from_replica(replica, ballot_id):
     try:
