@@ -49,6 +49,7 @@ class BallotOption(db.Model):
     votes = db.Column(db.Integer, default=0)
 
 leader_election_event = threading.Event()
+leader_election_event.set()
 # Election routes and logic
 # Function to monitor the leader's health and initiate an election if necessary
 def monitor_leader():
