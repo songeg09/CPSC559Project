@@ -14,7 +14,7 @@ db = SQLAlchemy(app)
 REPLICA_ID = "24.64.172.31:5001"
 
 # Example list of all replicas, including this one
-REPLICAS = ["137.186.166.119:5001", "174.0.252.58:5001", ...]
+REPLICAS = ["137.186.166.119:5001", "174.0.252.58:5001"]
 
 # Variable to keep track of the current leader
 current_leader = None
