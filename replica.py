@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import date, datetime
 import requests
-from threading import Thread
+from threading import Thread, Timer
 import time
 
 app = Flask(__name__)
@@ -16,8 +16,11 @@ REPLICA_ID = "24.64.172.31:5001"
 # Example list of all replicas, including this one
 REPLICAS = ["137.186.166.119:5001", "174.0.252.58:5001"]
 
+ELECTION_TIMEOUT = 5  # seconds, adjust based on network conditions
+
 # Variable to keep track of the current leader
 current_leader = None
+election_timer = None
 
 # Define the Vote model
 class Vote(db.Model):
@@ -71,27 +74,57 @@ def check_leader_health():
 
 @app.route('/election', methods=['POST'])
 def handle_election_message():
+    global election_timer
     sender_id = request.json.get('sender_id')
     print(f"Election message received from {sender_id}")
+    
     if REPLICA_ID > sender_id:
-        # Send an OK message back to the sender to acknowledge the election message
+        # Send an OK message back
         send_message(sender_id, 'ok', {'sender_id': REPLICA_ID})
-        # Start the election process
-        start_election()
+        
+        # Start own election if not already in progress
+        if election_timer is None:
+            start_election()
+    
     return jsonify({'message': 'Election message received'}), 200
 
 def start_election():
-    global REPLICA_ID, REPLICAS
+    global election_timer
     higher_replicas = [replica for replica in REPLICAS if replica > REPLICA_ID]
-    for replica in higher_replicas:
-        send_message(replica, 'election', {'sender_id': REPLICA_ID})
-    if not higher_replicas:
+    
+    if higher_replicas:
+        for replica in higher_replicas:
+            send_message(replica, 'election', {'sender_id': REPLICA_ID})
+        
+        # Start election timer
+        election_timer = Timer(ELECTION_TIMEOUT, check_election_timeout)
+        election_timer.start()
+    else:
+        declare_leader()
+
+@app.route('/ok', methods=['POST'])
+def handle_ok_message():
+    global election_timer
+    # Stop the election timer upon receiving an OK message
+    if election_timer:
+        election_timer.cancel()
+        election_timer = None
+    
+    return jsonify({'status': 'OK message received'}), 200
+
+def check_election_timeout():
+    global election_timer, current_leader
+    election_timer = None
+    
+    # Declare self as leader if no OK received
+    if current_leader is None:
         declare_leader()
 
 def declare_leader():
-    global REPLICA_ID, REPLICAS, current_leader
-    print(f"{REPLICA_ID} is declaring itself as the leader.")
+    global current_leader
     current_leader = REPLICA_ID
+    print(f"{REPLICA_ID} is declaring itself as the leader.")
+    
     for replica in REPLICAS:
         if replica != REPLICA_ID:
             send_message(replica, 'leader', {'leader_id': REPLICA_ID})
@@ -106,8 +139,7 @@ def handle_leader_message():
     return jsonify({'message': f'Leader {leader_id} acknowledged'}), 200
 
 def send_message(replica_id, endpoint, data):
-    replica_ip, replica_port = replica_id.split(':')
-    url = f"http://{replica_ip}:{replica_port}/{endpoint}"
+    url = f"http://{replica_id}/{endpoint}"
     try:
         response = requests.post(url, json=data)
         return response.json()
