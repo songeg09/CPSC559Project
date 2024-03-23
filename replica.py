@@ -55,7 +55,9 @@ leader_election_event.set()
 def monitor_leader():
     global current_leader
     while True:
+        print("waiting for leader to be elected")
         leader_election_event.wait()  # Wait for the event to be set
+        print("checking leader health")
         if not check_leader_health():
             print("Leader is unresponsive, starting an election.")
             start_election()
@@ -114,6 +116,7 @@ def handle_ok_message():
     global election_timer
     # Stop the election timer upon receiving an OK message
     if election_timer:
+        print("cancelling election timer")
         election_timer.cancel()
         election_timer = None
     
@@ -140,7 +143,8 @@ def declare_leader():
 # New route for leader declaration
 @app.route('/leader', methods=['POST'])
 def handle_leader_message():
-    global current_leader
+    global current_leader, leader_election_event
+    leader_election_event.set()
     leader_id = request.json.get('leader_id')
     current_leader = leader_id
     print(f"New leader declared: {current_leader}")
