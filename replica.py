@@ -89,8 +89,9 @@ def start_election():
         declare_leader()
 
 def declare_leader():
-    global REPLICA_ID, REPLICAS
+    global REPLICA_ID, REPLICAS, current_leader
     print(f"{REPLICA_ID} is declaring itself as the leader.")
+    current_leader = REPLICA_ID
     for replica in REPLICAS:
         if replica != REPLICA_ID:
             send_message(replica, 'leader', {'leader_id': REPLICA_ID})
