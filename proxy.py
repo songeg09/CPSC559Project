@@ -1,18 +1,16 @@
 import os
 import threading
-from threading import Lock
 import time
-from flask import Flask, render_template, request, jsonify, send_from_directory, session
 import requests
-from flask import Flask, request, redirect, url_for
+from threading import Lock
+from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for, flash
 from concurrent.futures import ThreadPoolExecutor, as_completed, FIRST_COMPLETED, wait
-from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = 'your_secret_key'
 # List of replicas
 REPLICA_ADDRESSES = [
-    #'http://127.0.0.1:5001/',
+    # 'http://127.0.0.1:5001/',
     'http://24.64.172.31:5001/',
     'http://174.0.252.58:5001/',
     'http://137.186.166.119:5001/',
