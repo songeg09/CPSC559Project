@@ -48,15 +48,17 @@ class BallotOption(db.Model):
     ballot = db.relationship('Ballot', backref=db.backref('options', lazy=True))
     votes = db.Column(db.Integer, default=0)
 
-
+leader_election_event = threading.Event()
 # Election routes and logic
 # Function to monitor the leader's health and initiate an election if necessary
 def monitor_leader():
     global current_leader
     while True:
+        leader_election_event.wait()  # Wait for the event to be set
         if not check_leader_health():
             print("Leader is unresponsive, starting an election.")
             start_election()
+
         time.sleep(5)  # Check every 5 seconds, adjust as necessary    
 
 # Function to send heartbeat requests to the leader
@@ -89,17 +91,21 @@ def handle_election_message():
     return jsonify({'message': 'Election message received'}), 200
 
 def start_election():
-    global election_timer
+    leader_election_event.clear()  # At the start of an election
+    global election_timer, leader_election_event, current_leader
     higher_replicas = [replica for replica in REPLICAS if replica > REPLICA_ID]
-    
+
     if higher_replicas:
+        print(f"{REPLICA_ID} found higher replicas, sending election messages...")
         for replica in higher_replicas:
             send_message(replica, 'election', {'sender_id': REPLICA_ID})
         
-        # Start election timer
-        election_timer = Timer(ELECTION_TIMEOUT, check_election_timeout)
-        election_timer.start()
+        if not election_timer:  # Start the timer only if it's not already running
+            print(f"{REPLICA_ID} starting election timer...")
+            election_timer = Timer(ELECTION_TIMEOUT, check_election_timeout)
+            election_timer.start()
     else:
+        print(f"{REPLICA_ID} found no higher replicas, declaring itself as leader...")
         declare_leader()
 
 @app.route('/ok', methods=['POST'])
@@ -113,18 +119,19 @@ def handle_ok_message():
     return jsonify({'status': 'OK message received'}), 200
 
 def check_election_timeout():
-    global election_timer, current_leader
-    election_timer = None
-    
-    # Declare self as leader if no OK received
-    if current_leader is None:
+    global election_timer, current_leader, leader_election_event
+    if not current_leader:  # If no leader has been elected by the timeout
+        print(f"{REPLICA_ID}'s election timer expired, declaring itself as leader...")
         declare_leader()
+    # Reset the timer regardless of the outcome to avoid repeated firing
+    election_timer.cancel()
+    election_timer = None
 
 def declare_leader():
-    global current_leader
-    current_leader = REPLICA_ID
-    print(f"{REPLICA_ID} is declaring itself as the leader.")
-    
+    global REPLICA_ID, REPLICAS, current_leader, leader_election_event
+    current_leader = REPLICA_ID  # Update the current leader
+    leader_election_event.set()  # Resume the monitoring loop
+    print(f"{REPLICA_ID} is declaring itself as the leader and notifying others...")
     for replica in REPLICAS:
         if replica != REPLICA_ID:
             send_message(replica, 'leader', {'leader_id': REPLICA_ID})
