@@ -91,8 +91,8 @@ def handle_election_message():
     return jsonify({'message': 'Election message received'}), 200
 
 def start_election():
-    leader_election_event.clear()  # At the start of an election
     global election_timer, leader_election_event, current_leader
+    leader_election_event.clear()  # At the start of an election
     higher_replicas = [replica for replica in REPLICAS if replica > REPLICA_ID]
 
     if higher_replicas:
