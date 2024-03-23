@@ -1,11 +1,23 @@
+import threading
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import date, datetime
+import requests
+from threading import Thread
+import time
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///votes.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+REPLICA_ID = "24.64.172.31:5001"
+
+# Example list of all replicas, including this one
+REPLICAS = ["137.186.166.119:5001", "174.0.252.58:5001", ...]
+
+# Variable to keep track of the current leader
+current_leader = None
 
 # Define the Vote model
 class Vote(db.Model):
@@ -32,6 +44,76 @@ class BallotOption(db.Model):
     option_text = db.Column(db.String(250), nullable=False)
     ballot = db.relationship('Ballot', backref=db.backref('options', lazy=True))
     votes = db.Column(db.Integer, default=0)
+
+
+# Election routes and logic
+# Function to monitor the leader's health and initiate an election if necessary
+def monitor_leader():
+    global current_leader
+    while True:
+        if not check_leader_health():
+            print("Leader is unresponsive, starting an election.")
+            start_election()
+        time.sleep(5)  # Check every 5 seconds, adjust as necessary    
+
+# Function to send heartbeat requests to the leader
+def check_leader_health():
+    global current_leader
+    if current_leader is None:
+        return False  # No leader to check
+
+    try:
+        response = requests.get(f'http://{current_leader}/heartbeat')
+        if response.status_code == 200 and response.json().get('status') == 'alive':
+            return True  # Leader is healthy
+    except requests.exceptions.RequestException:
+        return False  # Leader is unresponsive    
+
+@app.route('/election', methods=['POST'])
+def handle_election_message():
+    sender_id = request.json.get('sender_id')
+    print(f"Election message received from {sender_id}")
+    if REPLICA_ID > sender_id:
+        # Send an OK message back to the sender to acknowledge the election message
+        send_message(sender_id, 'ok', {'sender_id': REPLICA_ID})
+        # Start the election process
+        start_election()
+    return jsonify({'message': 'Election message received'}), 200
+
+def start_election():
+    global REPLICA_ID, REPLICAS
+    higher_replicas = [replica for replica in REPLICAS if replica > REPLICA_ID]
+    for replica in higher_replicas:
+        send_message(replica, 'election', {'sender_id': REPLICA_ID})
+    if not higher_replicas:
+        declare_leader()
+
+def declare_leader():
+    global REPLICA_ID, REPLICAS
+    print(f"{REPLICA_ID} is declaring itself as the leader.")
+    for replica in REPLICAS:
+        if replica != REPLICA_ID:
+            send_message(replica, 'leader', {'leader_id': REPLICA_ID})
+
+# New route for leader declaration
+@app.route('/leader', methods=['POST'])
+def handle_leader_message():
+    global current_leader
+    leader_id = request.json.get('leader_id')
+    current_leader = leader_id
+    print(f"New leader declared: {current_leader}")
+    return jsonify({'message': f'Leader {leader_id} acknowledged'}), 200
+
+def send_message(replica_id, endpoint, data):
+    replica_ip, replica_port = replica_id.split(':')
+    url = f"http://{replica_ip}:{replica_port}/{endpoint}"
+    try:
+        response = requests.post(url, json=data)
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending message to {replica_id}: {e}")
+        return None
+
 
 @app.before_request
 def create_tables():
@@ -194,4 +276,5 @@ def heartbeat():
     return jsonify({"status": "alive"}), 200
 
 if __name__ == '__main__':
-    app.run(host = '0.0.0.0', port=5001)  # Run different instances on different ports.
+    threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False)).start()
+    threading.Thread(target=monitor_leader, daemon=True).start()
