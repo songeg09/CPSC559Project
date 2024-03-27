@@ -11,10 +11,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///votes.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-REPLICA_ID = "24.64.172.31:5001"
+REPLICA_ID = "137.186.166.119:5001"
 
 # Example list of all replicas, including this one
-REPLICAS = ["137.186.166.119:5001", "174.0.252.58:5001"]
+REPLICAS = ["24.64.172.31:5001", "174.0.252.58:5001", "68.146.238.222:5001"]
 
 ELECTION_TIMEOUT = 5  # seconds, adjust based on network conditions
 
@@ -48,6 +48,7 @@ class BallotOption(db.Model):
     ballot = db.relationship('Ballot', backref=db.backref('options', lazy=True))
     votes = db.Column(db.Integer, default=0)
 
+# Leader ----------------------------------------------------------------------------------
 leader_election_event = threading.Event()
 leader_election_event.set()
 # Election routes and logic
@@ -57,10 +58,11 @@ def monitor_leader():
     while True:
         print("waiting for leader to be elected")
         leader_election_event.wait()  # Wait for the event to be set
-        print("checking leader health")
-        if not check_leader_health():
-            print("Leader is unresponsive, starting an election.")
-            start_election()
+        if current_leader != REPLICA_ID:  # Skip health check if self is the leader
+            print("checking leader health")
+            if not check_leader_health():
+                print("Leader is unresponsive, starting an election.")
+                start_election()
 
         time.sleep(5)  # Check every 5 seconds, adjust as necessary    
 
@@ -159,6 +161,8 @@ def send_message(replica_id, endpoint, data):
         print(f"Error sending message to {replica_id}: {e}")
         return None
 
+
+# Consencus ------------------------------------------------------------------------------
 
 @app.before_request
 def create_tables():
@@ -321,5 +325,6 @@ def heartbeat():
     return jsonify({"status": "alive"}), 200
 
 if __name__ == '__main__':
-    threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False)).start()
+    # threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False)).start()
     threading.Thread(target=monitor_leader, daemon=True).start()
+    app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False)
