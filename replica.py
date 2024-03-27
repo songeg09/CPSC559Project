@@ -11,10 +11,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///votes.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-REPLICA_ID = "137.186.166.119:5001"
+REPLICA_ID = "24.64.172.31:5001"
 
 # Example list of all replicas, including this one
-REPLICAS = ["24.64.172.31:5001", "174.0.252.58:5001", "68.146.238.222:5001"]
+REPLICAS = ["137.186.166.119:5001", "174.0.252.58:5001", "68.146.238.222:5001"]
 
 ELECTION_TIMEOUT = 5  # seconds, adjust based on network conditions
 
@@ -56,7 +56,7 @@ leader_election_event.set()
 def monitor_leader():
     global current_leader
     while True:
-        print("waiting for leader to be elected")
+        print(f"Current leader is: {current_leader}")
         leader_election_event.wait()  # Wait for the event to be set
         if current_leader != REPLICA_ID:  # Skip health check if self is the leader
             print("checking leader health")
@@ -73,7 +73,7 @@ def check_leader_health():
         return False  # No leader to check
 
     try:
-        response = requests.get(f'http://{current_leader}/heartbeat')
+        response = requests.get(f'http://{current_leader}/heartbeat', timeout= 5)
         if response.status_code == 200 and response.json().get('status') == 'alive':
             return True  # Leader is healthy
     except requests.exceptions.RequestException:
@@ -97,6 +97,7 @@ def handle_election_message():
 
 def start_election():
     global election_timer, leader_election_event, current_leader
+    current_leader = None
     leader_election_event.clear()  # At the start of an election
     higher_replicas = [replica for replica in REPLICAS if replica > REPLICA_ID]
 
@@ -155,7 +156,7 @@ def handle_leader_message():
 def send_message(replica_id, endpoint, data):
     url = f"http://{replica_id}/{endpoint}"
     try:
-        response = requests.post(url, json=data)
+        response = requests.post(url, json=data, timeout=5)
         return response.json()
     except requests.exceptions.RequestException as e:
         print(f"Error sending message to {replica_id}: {e}")
