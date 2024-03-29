@@ -1,7 +1,7 @@
 import json
 import sqlite3
 import threading
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, current_app
 from flask_sqlalchemy import SQLAlchemy
 from datetime import date, datetime
 import requests
@@ -73,18 +73,19 @@ scheduler.start()
 
 @scheduler.task('interval', id='request_snapshots', seconds=60, misfire_grace_time=900)
 def request_snapshots():
-    if REPLICA_ID == current_leader:
-        print("requesting snapshot")
-        for replica in REPLICAS:
-            if replica != REPLICA_ID:
-                url = f"http://{replica}/request_snapshot"
-                try:
-                    response = requests.get(url)
-                    # Assume the response contains the snapshot
-                    snapshot_data = response.json()
-                    compare_and_sync_snapshot(snapshot_data, replica)
-                except requests.exceptions.RequestException as e:
-                    print(f"Failed to request snapshot from {replica}: {str(e)}")
+    with current_app.app_context():
+        if REPLICA_ID == current_leader:
+            print("requesting snapshot")
+            for replica in REPLICAS:
+                if replica != REPLICA_ID:
+                    url = f"http://{replica}/request_snapshot"
+                    try:
+                        response = requests.get(url)
+                        # Assume the response contains the snapshot
+                        snapshot_data = response.json()
+                        compare_and_sync_snapshot(snapshot_data, replica)
+                    except requests.exceptions.RequestException as e:
+                        print(f"Failed to request snapshot from {replica}: {str(e)}")
 
 @app.route('/request_snapshot', methods=['GET'])
 def handle_snapshot_request():
