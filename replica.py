@@ -73,7 +73,7 @@ scheduler.start()
 
 @scheduler.task('interval', id='request_snapshots', seconds=60, misfire_grace_time=900)
 def request_snapshots():
-    with current_app.app_context():
+    with app.app_context():
         if REPLICA_ID == current_leader:
             print("requesting snapshot")
             for replica in REPLICAS:
