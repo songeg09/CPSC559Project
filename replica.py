@@ -101,27 +101,46 @@ def handle_snapshot_request():
     snapshot = create_snapshot()  # Function to create the snapshot
     return jsonify(snapshot)
 
+import hashlib
+
 def find_majority_snapshot():
     global snapshot_responses
     # Debug: Print the snapshot_responses for inspection
     print("Snapshot responses received from replicas:", snapshot_responses)
 
-    # Sort the snapshot_responses dictionary by the length of the list of replicas for each snapshot
-    sorted_snapshots = sorted(snapshot_responses.items(), key=lambda x: len(x[1]), reverse=True)
-    majority_snapshot, replicas = sorted_snapshots[0]
+    # Compute hash for each snapshot and group by hash
+    snapshot_hash_responses = {}
+    for snapshot_json, replicas in snapshot_responses.items():
+        snapshot_hash = hashlib.sha256(snapshot_json.encode('utf-8')).hexdigest()
+        if snapshot_hash not in snapshot_hash_responses:
+            snapshot_hash_responses[snapshot_hash] = []
+        snapshot_hash_responses[snapshot_hash].extend(replicas)
+
+    # Determine the majority based on the hash with the highest number of matching replicas
+    majority_snapshot_hash, replicas = max(snapshot_hash_responses.items(), key=lambda x: len(x[1]))
     
-    print(f"Majority snapshot determined with {len(replicas)} replicas agreeing.")
+    print(f"Majority snapshot hash determined with {len(replicas)} replicas agreeing.")
+
+    # Retrieve the JSON for the majority snapshot using its hash
+    majority_snapshot_json = next(key for key, value in snapshot_responses.items() if hashlib.sha256(key.encode('utf-8')).hexdigest() == majority_snapshot_hash)
+    majority_snapshot = json.loads(majority_snapshot_json)
+
     # Debug: Print the content of the majority snapshot for inspection
     print("Majority snapshot content:", majority_snapshot)
 
     # Check if the leader's snapshot is part of the majority
-    leader_in_majority = REPLICA_ID in replicas
+    leader_snapshot_json = create_snapshot()
+    leader_snapshot_hash = hashlib.sha256(leader_snapshot_json.encode('utf-8')).hexdigest()
+    leader_in_majority = leader_snapshot_hash == majority_snapshot_hash
 
     # Debug: Print whether the leader's snapshot is in the majority
     print("Is leader's snapshot in the majority?", leader_in_majority)
 
     for replica in REPLICAS:
-        if replica in replicas:
+        replica_snapshot_json = next((key for key, value in snapshot_responses.items() if replica in value), None)
+        replica_snapshot_hash = hashlib.sha256(replica_snapshot_json.encode('utf-8')).hexdigest() if replica_snapshot_json else None
+        
+        if replica_snapshot_hash == majority_snapshot_hash:
             # The replica already has the correct snapshot
             print(f"Sending ACK to replica {replica} which is in majority.")
             send_ack(replica)
@@ -134,6 +153,7 @@ def find_majority_snapshot():
         # If the leader's snapshot is not part of the majority, update the leader with the majority snapshot
         print("Leader's snapshot is not in majority, updating the leader's snapshot.")
         apply_snapshot(majority_snapshot)
+
 
 
 def send_ack(replica_id):
@@ -164,21 +184,24 @@ def update_snapshot():
     return jsonify({"status": "Snapshot updated"}), 200
 
 def create_snapshot():
-    # Querying all data from each table
-    votes = Vote.query.all()
-    users = User.query.all()
-    ballots = Ballot.query.all()
-    options = BallotOption.query.all()
+    # Ensure consistent ordering in your queries
+    votes = Vote.query.order_by(Vote.id).all()
+    users = User.query.order_by(User.id).all()
+    ballots = Ballot.query.order_by(Ballot.id).all()
+    options = BallotOption.query.order_by(BallotOption.id).all()
 
-    # Serializing the data to a dictionary format
+    # Construct the snapshot using a consistent data structure
     snapshot = {
-        "votes": [vote.serialize for vote in votes],
-        "users": [user.serialize for user in users],
-        "ballots": [ballot.serialize for ballot in ballots],
-        "options": [option.serialize for option in options]
+        "votes": [vote.as_dict() for vote in votes],  # Ensure as_dict() method provides consistent ordering
+        "users": [user.as_dict() for user in users],
+        "ballots": [ballot.as_dict() for ballot in ballots],
+        "options": [option.as_dict() for option in options]
     }
 
-    return snapshot
+    # Use json.dumps with sort_keys=True to ensure consistent ordering of keys
+    snapshot_json = json.dumps(snapshot, sort_keys=True)
+    return snapshot_json
+
 
 def apply_snapshot(snapshot):
     # Clear existing data in the database tables
