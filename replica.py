@@ -69,8 +69,6 @@ class BallotOption(db.Model):
         return {'id': self.id, 'ballot_id': self.ballot_id, 'option_text': self.option_text}
 
 scheduler = APScheduler()
-scheduler.init_app(app)
-scheduler.start()
 snapshot_responses = defaultdict(list)
 
 @scheduler.task('interval', id='request_snapshots', seconds=60, misfire_grace_time=900)
@@ -466,5 +464,7 @@ def heartbeat():
 
 if __name__ == '__main__':
     # threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False)).start()
+    scheduler.init_app(app)
+    scheduler.start()
     threading.Thread(target=monitor_leader, daemon=True).start()
     app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False)
