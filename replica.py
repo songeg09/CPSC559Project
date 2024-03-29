@@ -1,3 +1,5 @@
+import json
+import sqlite3
 import threading
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -5,6 +7,7 @@ from datetime import date, datetime
 import requests
 from threading import Thread, Timer
 import time
+from flask_apscheduler import APScheduler
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///votes.db'
@@ -14,9 +17,9 @@ db = SQLAlchemy(app)
 REPLICA_ID = "24.64.172.31:5001"
 
 # Example list of all replicas, including this one
-REPLICAS = ["137.186.166.119:5001", "174.0.252.58:5001", "68.146.238.222:5001"]
+REPLICAS = ["137.186.166.119:5001", "174.0.252.58:5001"]
 
-ELECTION_TIMEOUT = 5  # seconds, adjust based on network conditions
+ELECTION_TIMEOUT = 7  # seconds, adjust based on network conditions
 
 # Variable to keep track of the current leader
 current_leader = None
@@ -47,6 +50,130 @@ class BallotOption(db.Model):
     option_text = db.Column(db.String(250), nullable=False)
     ballot = db.relationship('Ballot', backref=db.backref('options', lazy=True))
     votes = db.Column(db.Integer, default=0)
+
+scheduler = APScheduler()
+scheduler.init_app(app)
+scheduler.start()
+
+@scheduler.task('interval', id='request_snapshots', seconds=60, misfire_grace_time=900)
+def request_snapshots():
+    if REPLICA_ID == current_leader:
+        print("requesting snapshot")
+        for replica in REPLICAS:
+            if replica != REPLICA_ID:
+                url = f"http://{replica}/request_snapshot"
+                try:
+                    response = requests.get(url)
+                    # Assume the response contains the snapshot
+                    snapshot_data = response.json()
+                    compare_and_sync_snapshot(snapshot_data, replica)
+                except requests.exceptions.RequestException as e:
+                    print(f"Failed to request snapshot from {replica}: {str(e)}")
+
+@app.route('/request_snapshot', methods=['GET'])
+def handle_snapshot_request():
+    snapshot = create_snapshot()  # Function to create the snapshot
+    return jsonify(snapshot)
+
+def compare_and_sync_snapshot(received_snapshot, replica_id):
+    # Compare with the leader's snapshot
+    leader_snapshot = create_snapshot()
+    
+    # If they match, send an acknowledgment; if not, send the correct snapshot
+    if received_snapshot == leader_snapshot:
+        send_ack(replica_id)
+    else:
+        send_correct_snapshot(replica_id, leader_snapshot)
+
+def send_ack(replica_id):
+    url = f"http://{replica_id}/ack_snapshot"
+    try:
+        requests.post(url)
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to send ACK to {replica_id}: {str(e)}")
+
+def send_correct_snapshot(replica_id, correct_snapshot):
+    url = f"http://{replica_id}/update_snapshot"
+    try:
+        requests.post(url, json=correct_snapshot)
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to send correct snapshot to {replica_id}: {str(e)}")
+@app.route('/ack_snapshot', methods=['POST'])
+def handle_ack():
+    # Logic to handle acknowledgment
+    print(f"Snapshot ACKed by the leader.")
+    return jsonify({"status": "ACK received"}), 200
+
+@app.route('/update_snapshot', methods=['POST'])
+def update_snapshot():
+    new_snapshot = request.json
+    # Logic to update the local state to match the new snapshot
+    apply_snapshot(new_snapshot)
+    return jsonify({"status": "Snapshot updated"}), 200
+
+def create_snapshot():
+    # Connect to your SQLite database
+    conn = sqlite3.connect('votes.db')
+    cursor = conn.cursor()
+
+    # Fetch the entire state of your database
+    cursor.execute("SELECT * FROM Vote")
+    votes = cursor.fetchall()
+    cursor.execute("SELECT * FROM User")
+    users = cursor.fetchall()
+    cursor.execute("SELECT * FROM Ballot")
+    ballots = cursor.fetchall()
+    cursor.execute("SELECT * FROM BallotOption")
+    options = cursor.fetchall()
+
+    # Serialize the state into a dictionary
+    snapshot = {
+        "votes": votes,
+        "users": users,
+        "ballots": ballots,
+        "options": options
+    }
+
+    # Convert the dictionary to a JSON string
+    snapshot_json = json.dumps(snapshot)
+
+    # Save the snapshot to a file
+    with open("snapshot.json", "w") as file:
+        file.write(snapshot_json)
+
+    # Close the database connection
+    conn.close()
+
+def apply_snapshot():
+    # Read the snapshot from the file
+    with open("snapshot.json", "r") as file:
+        snapshot_json = file.read()
+    
+    snapshot = json.loads(snapshot_json)
+
+    # Connect to your SQLite database
+    conn = sqlite3.connect('votes.db')
+    cursor = conn.cursor()
+
+    # Clear existing data
+    cursor.execute("DELETE FROM Vote")
+    cursor.execute("DELETE FROM User")
+    cursor.execute("DELETE FROM Ballot")
+    cursor.execute("DELETE FROM BallotOption")
+
+    # Restore the state from the snapshot
+    for vote in snapshot["votes"]:
+        cursor.execute("INSERT INTO Vote VALUES (?, ?)", vote)
+    for user in snapshot["users"]:
+        cursor.execute("INSERT INTO User VALUES (?, ?, ?, ?)", user)
+    for ballot in snapshot["ballots"]:
+        cursor.execute("INSERT INTO Ballot VALUES (?, ?, ?, ?, ?)", ballot)
+    for option in snapshot["options"]:
+        cursor.execute("INSERT INTO BallotOption VALUES (?, ?, ?, ?)", option)
+
+    # Commit changes and close the connection
+    conn.commit()
+    conn.close()
 
 # Leader ----------------------------------------------------------------------------------
 leader_election_event = threading.Event()
@@ -103,13 +230,15 @@ def start_election():
 
     if higher_replicas:
         print(f"{REPLICA_ID} found higher replicas, sending election messages...")
-        for replica in higher_replicas:
-            send_message(replica, 'election', {'sender_id': REPLICA_ID})
         
         if not election_timer:  # Start the timer only if it's not already running
             print(f"{REPLICA_ID} starting election timer...")
             election_timer = Timer(ELECTION_TIMEOUT, check_election_timeout)
             election_timer.start()
+        
+        for replica in higher_replicas:
+            send_message(replica, 'election', {'sender_id': REPLICA_ID})
+           
     else:
         print(f"{REPLICA_ID} found no higher replicas, declaring itself as leader...")
         declare_leader()
