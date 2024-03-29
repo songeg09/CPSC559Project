@@ -106,9 +106,9 @@ def find_majority_snapshot():
     # Debug: Print the snapshot_responses for inspection
     print("Snapshot responses received from replicas:", snapshot_responses)
 
-    # Determine the majority snapshot based on the highest number of matching snapshots
-    majority_snapshot_json, replicas = max(snapshot_responses.items(), key=lambda x: len(x[1]))
-    majority_snapshot = json.loads(majority_snapshot_json)
+    # Sort the snapshot_responses dictionary by the length of the list of replicas for each snapshot
+    sorted_snapshots = sorted(snapshot_responses.items(), key=lambda x: len(x[1]), reverse=True)
+    majority_snapshot, replicas = sorted_snapshots[0]
     
     print(f"Majority snapshot determined with {len(replicas)} replicas agreeing.")
     # Debug: Print the content of the majority snapshot for inspection
