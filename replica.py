@@ -114,7 +114,7 @@ def update_snapshot():
 
 def create_snapshot():
     # Connect to your SQLite database
-    conn = sqlite3.connect('votes.db')
+    conn = sqlite3.connect('instance\votes.db')
     cursor = conn.cursor()
 
     # Fetch the entire state of your database
