@@ -184,24 +184,21 @@ def update_snapshot():
     return jsonify({"status": "Snapshot updated"}), 200
 
 def create_snapshot():
-    # Ensure consistent ordering in your queries
+    # Querying all data from each table
     votes = Vote.query.order_by(Vote.id).all()
     users = User.query.order_by(User.id).all()
     ballots = Ballot.query.order_by(Ballot.id).all()
     options = BallotOption.query.order_by(BallotOption.id).all()
 
-    # Construct the snapshot using a consistent data structure
+    # Serializing the data to a dictionary format
     snapshot = {
-        "votes": [vote.as_dict() for vote in votes],  # Ensure as_dict() method provides consistent ordering
-        "users": [user.as_dict() for user in users],
-        "ballots": [ballot.as_dict() for ballot in ballots],
-        "options": [option.as_dict() for option in options]
+        "votes": [vote.serialize for vote in votes],
+        "users": [user.serialize for user in users],
+        "ballots": [ballot.serialize for ballot in ballots],
+        "options": [option.serialize for option in options]
     }
 
-    # Use json.dumps with sort_keys=True to ensure consistent ordering of keys
-    snapshot_json = json.dumps(snapshot, sort_keys=True)
-    return snapshot_json
-
+    return snapshot
 
 def apply_snapshot(snapshot):
     # Clear existing data in the database tables
