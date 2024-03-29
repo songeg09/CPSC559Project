@@ -30,12 +30,20 @@ class Vote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     vote = db.Column(db.String(64), nullable=False)
 
+    @property
+    def serialize(self):
+        return {'id': self.id, 'vote': self.vote}
+
 # Define the User model
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(80), nullable=False)  # In a real app, ensure you hash passwords
     email = db.Column(db.String(120), unique=True, nullable=False)
+
+    @property
+    def serialize(self):
+        return {'id': self.id, 'username': self.username, 'password': self.password, 'email': self.email}
 
 class Ballot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -44,12 +52,20 @@ class Ballot(db.Model):
     start_date = db.Column(db.Date, nullable=False, default=date.today)
     end_date = db.Column(db.Date, nullable=False, default=date.today)
 
+    @property
+    def serialize(self):
+        return {'id': self.id, 'title': self.title, 'description': self.description, 'start_date': str(self.start_date), 'end_date': str(self.end_date)}
+
 class BallotOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ballot_id = db.Column(db.Integer, db.ForeignKey('ballot.id'), nullable=False)
     option_text = db.Column(db.String(250), nullable=False)
     ballot = db.relationship('Ballot', backref=db.backref('options', lazy=True))
     votes = db.Column(db.Integer, default=0)
+
+    @property
+    def serialize(self):
+        return {'id': self.id, 'ballot_id': self.ballot_id, 'option_text': self.option_text}
 
 scheduler = APScheduler()
 scheduler.init_app(app)
@@ -113,68 +129,48 @@ def update_snapshot():
     return jsonify({"status": "Snapshot updated"}), 200
 
 def create_snapshot():
-    # Connect to your SQLite database
-    conn = sqlite3.connect('instance\votes.db')
-    cursor = conn.cursor()
+    # Querying all data from each table
+    votes = Vote.query.all()
+    users = User.query.all()
+    ballots = Ballot.query.all()
+    options = BallotOption.query.all()
 
-    # Fetch the entire state of your database
-    cursor.execute("SELECT * FROM vote")
-    votes = cursor.fetchall()
-    cursor.execute("SELECT * FROM user")
-    users = cursor.fetchall()
-    cursor.execute("SELECT * FROM ballot")
-    ballots = cursor.fetchall()
-    cursor.execute("SELECT * FROM ballot_option")
-    options = cursor.fetchall()
-
-    # Serialize the state into a dictionary
+    # Serializing the data to a dictionary format
     snapshot = {
-        "votes": votes,
-        "users": users,
-        "ballots": ballots,
-        "options": options
+        "votes": [vote.serialize for vote in votes],
+        "users": [user.serialize for user in users],
+        "ballots": [ballot.serialize for ballot in ballots],
+        "options": [option.serialize for option in options]
     }
 
-    # Convert the dictionary to a JSON string
-    snapshot_json = json.dumps(snapshot)
+    return snapshot
 
-    # Save the snapshot to a file
-    with open("snapshot.json", "w") as file:
-        file.write(snapshot_json)
+def apply_snapshot(snapshot):
+    # Clear existing data in the database tables
+    db.session.query(Vote).delete()
+    db.session.query(User).delete()
+    db.session.query(Ballot).delete()
+    db.session.query(BallotOption).delete()
 
-    # Close the database connection
-    conn.close()
+    # Iterate through each table's data in the snapshot and add them back to the database
+    for vote_data in snapshot['votes']:
+        vote = Vote(id=vote_data['id'], vote=vote_data['vote'])
+        db.session.add(vote)
 
-def apply_snapshot():
-    # Read the snapshot from the file
-    with open("snapshot.json", "r") as file:
-        snapshot_json = file.read()
-    
-    snapshot = json.loads(snapshot_json)
+    for user_data in snapshot['users']:
+        user = User(id=user_data['id'], username=user_data['username'], password=user_data['password'], email=user_data['email'])
+        db.session.add(user)
 
-    # Connect to your SQLite database
-    conn = sqlite3.connect('votes.db')
-    cursor = conn.cursor()
+    for ballot_data in snapshot['ballots']:
+        ballot = Ballot(id=ballot_data['id'], title=ballot_data['title'], description=ballot_data['description'], start_date=datetime.strptime(ballot_data['start_date'], '%Y-%m-%d').date(), end_date=datetime.strptime(ballot_data['end_date'], '%Y-%m-%d').date())
+        db.session.add(ballot)
 
-    # Clear existing data
-    cursor.execute("DELETE FROM vote")
-    cursor.execute("DELETE FROM user")
-    cursor.execute("DELETE FROM ballot")
-    cursor.execute("DELETE FROM ballot_option")
+    for option_data in snapshot['options']:
+        option = BallotOption(id=option_data['id'], ballot_id=option_data['ballot_id'], option_text=option_data['option_text'])
+        db.session.add(option)
 
-    # Restore the state from the snapshot
-    for vote in snapshot["votes"]:
-        cursor.execute("INSERT INTO vote VALUES (?, ?)", vote)
-    for user in snapshot["users"]:
-        cursor.execute("INSERT INTO user VALUES (?, ?, ?, ?)", user)
-    for ballot in snapshot["ballots"]:
-        cursor.execute("INSERT INTO ballot VALUES (?, ?, ?, ?, ?)", ballot)
-    for option in snapshot["options"]:
-        cursor.execute("INSERT INTO ballot_option VALUES (?, ?, ?, ?)", option)
-
-    # Commit changes and close the connection
-    conn.commit()
-    conn.close()
+    # Commit the changes to apply the snapshot to the database
+    db.session.commit()
 
 # Leader ----------------------------------------------------------------------------------
 leader_election_event = threading.Event()
