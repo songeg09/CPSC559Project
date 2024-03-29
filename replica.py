@@ -98,6 +98,7 @@ def send_correct_snapshot(replica_id, correct_snapshot):
         requests.post(url, json=correct_snapshot)
     except requests.exceptions.RequestException as e:
         print(f"Failed to send correct snapshot to {replica_id}: {str(e)}")
+
 @app.route('/ack_snapshot', methods=['POST'])
 def handle_ack():
     # Logic to handle acknowledgment
@@ -117,13 +118,13 @@ def create_snapshot():
     cursor = conn.cursor()
 
     # Fetch the entire state of your database
-    cursor.execute("SELECT * FROM Vote")
+    cursor.execute("SELECT * FROM vote")
     votes = cursor.fetchall()
-    cursor.execute("SELECT * FROM User")
+    cursor.execute("SELECT * FROM user")
     users = cursor.fetchall()
-    cursor.execute("SELECT * FROM Ballot")
+    cursor.execute("SELECT * FROM ballot")
     ballots = cursor.fetchall()
-    cursor.execute("SELECT * FROM BallotOption")
+    cursor.execute("SELECT * FROM ballot_option")
     options = cursor.fetchall()
 
     # Serialize the state into a dictionary
@@ -156,20 +157,20 @@ def apply_snapshot():
     cursor = conn.cursor()
 
     # Clear existing data
-    cursor.execute("DELETE FROM Vote")
-    cursor.execute("DELETE FROM User")
-    cursor.execute("DELETE FROM Ballot")
-    cursor.execute("DELETE FROM BallotOption")
+    cursor.execute("DELETE FROM vote")
+    cursor.execute("DELETE FROM user")
+    cursor.execute("DELETE FROM ballot")
+    cursor.execute("DELETE FROM ballot_option")
 
     # Restore the state from the snapshot
     for vote in snapshot["votes"]:
-        cursor.execute("INSERT INTO Vote VALUES (?, ?)", vote)
+        cursor.execute("INSERT INTO vote VALUES (?, ?)", vote)
     for user in snapshot["users"]:
-        cursor.execute("INSERT INTO User VALUES (?, ?, ?, ?)", user)
+        cursor.execute("INSERT INTO user VALUES (?, ?, ?, ?)", user)
     for ballot in snapshot["ballots"]:
-        cursor.execute("INSERT INTO Ballot VALUES (?, ?, ?, ?, ?)", ballot)
+        cursor.execute("INSERT INTO ballot VALUES (?, ?, ?, ?, ?)", ballot)
     for option in snapshot["options"]:
-        cursor.execute("INSERT INTO BallotOption VALUES (?, ?, ?, ?)", option)
+        cursor.execute("INSERT INTO ballot_option VALUES (?, ?, ?, ?)", option)
 
     # Commit changes and close the connection
     conn.commit()
