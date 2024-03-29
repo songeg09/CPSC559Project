@@ -8,6 +8,7 @@ import requests
 from threading import Thread, Timer
 import time
 from flask_apscheduler import APScheduler
+from collections import defaultdict
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///votes.db'
@@ -70,37 +71,48 @@ class BallotOption(db.Model):
 scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
+snapshot_responses = defaultdict(list)
 
 @scheduler.task('interval', id='request_snapshots', seconds=60, misfire_grace_time=900)
 def request_snapshots():
     with app.app_context():
         if REPLICA_ID == current_leader:
-            print("requesting snapshot")
+            global snapshot_responses
+            snapshot_responses.clear()  # Clear previous snapshots
+            print("Requesting snapshots from all replicas...")
+
+            # Include the leader's snapshot before requesting from others
+            leader_snapshot = create_snapshot()
+            leader_snapshot_json = json.dumps(leader_snapshot)
+            snapshot_responses[leader_snapshot_json].append(REPLICA_ID)
+
             for replica in REPLICAS:
                 if replica != REPLICA_ID:
                     url = f"http://{replica}/request_snapshot"
                     try:
-                        response = requests.get(url)
-                        # Assume the response contains the snapshot
+                        response = requests.get(url, timeout=10)  # Consider adding a timeout
                         snapshot_data = response.json()
-                        compare_and_sync_snapshot(snapshot_data, replica)
+                        snapshot_responses[json.dumps(snapshot_data)].append(replica)  # Group by snapshot content
                     except requests.exceptions.RequestException as e:
                         print(f"Failed to request snapshot from {replica}: {str(e)}")
+            # After collecting all responses, find the majority snapshot
+            find_majority_snapshot()
 
 @app.route('/request_snapshot', methods=['GET'])
 def handle_snapshot_request():
     snapshot = create_snapshot()  # Function to create the snapshot
     return jsonify(snapshot)
 
-def compare_and_sync_snapshot(received_snapshot, replica_id):
-    # Compare with the leader's snapshot
-    leader_snapshot = create_snapshot()
-    
-    # If they match, send an acknowledgment; if not, send the correct snapshot
-    if received_snapshot == leader_snapshot:
-        send_ack(replica_id)
-    else:
-        send_correct_snapshot(replica_id, leader_snapshot)
+def find_majority_snapshot():
+    global snapshot_responses
+    majority_snapshot, replicas = max(snapshot_responses.items(), key=lambda x: len(x[1]))
+    print(f"Majority snapshot determined with {len(replicas)} replicas agreeing.")
+
+    for replica in REPLICAS:
+        if replica in replicas:
+            send_ack(replica)  # The replica already has the correct snapshot
+        else:
+            send_correct_snapshot(replica, json.loads(majority_snapshot))  # Update the replica with the majority snapshot
 
 def send_ack(replica_id):
     url = f"http://{replica_id}/ack_snapshot"
