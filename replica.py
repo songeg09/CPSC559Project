@@ -8,7 +8,6 @@ import requests
 from threading import Thread, Timer
 import time
 from flask_apscheduler import APScheduler
-from collections import defaultdict
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///votes.db'
@@ -69,92 +68,39 @@ class BallotOption(db.Model):
         return {'id': self.id, 'ballot_id': self.ballot_id, 'option_text': self.option_text}
 
 scheduler = APScheduler()
-snapshot_responses = defaultdict(list)
+scheduler.init_app(app)
+scheduler.start()
 
 @scheduler.task('interval', id='request_snapshots', seconds=60, misfire_grace_time=900)
 def request_snapshots():
     with app.app_context():
         if REPLICA_ID == current_leader:
-            global snapshot_responses
-            snapshot_responses.clear()  # Clear previous snapshots
-            print("Requesting snapshots from all replicas...")
-
-            # Include the leader's snapshot before requesting from others
-            leader_snapshot = create_snapshot()
-            leader_snapshot_json = json.dumps(leader_snapshot)
-            snapshot_responses[leader_snapshot_json].append(REPLICA_ID)
-
+            print("requesting snapshot")
             for replica in REPLICAS:
                 if replica != REPLICA_ID:
                     url = f"http://{replica}/request_snapshot"
                     try:
-                        response = requests.get(url, timeout=10)  # Consider adding a timeout
+                        response = requests.get(url)
+                        # Assume the response contains the snapshot
                         snapshot_data = response.json()
-                        snapshot_responses[json.dumps(snapshot_data)].append(replica)  # Group by snapshot content
+                        compare_and_sync_snapshot(snapshot_data, replica)
                     except requests.exceptions.RequestException as e:
                         print(f"Failed to request snapshot from {replica}: {str(e)}")
-            # After collecting all responses, find the majority snapshot
-            find_majority_snapshot()
 
 @app.route('/request_snapshot', methods=['GET'])
 def handle_snapshot_request():
     snapshot = create_snapshot()  # Function to create the snapshot
     return jsonify(snapshot)
 
-import hashlib
-
-def find_majority_snapshot():
-    global snapshot_responses
-    # Debug: Print the snapshot_responses for inspection
-    print("Snapshot responses received from replicas:", snapshot_responses)
-
-    # Compute hash for each snapshot and group by hash
-    snapshot_hash_responses = {}
-    for snapshot_json, replicas in snapshot_responses.items():
-        snapshot_hash = hashlib.sha256(snapshot_json.encode('utf-8')).hexdigest()
-        if snapshot_hash not in snapshot_hash_responses:
-            snapshot_hash_responses[snapshot_hash] = []
-        snapshot_hash_responses[snapshot_hash].extend(replicas)
-
-    # Determine the majority based on the hash with the highest number of matching replicas
-    majority_snapshot_hash, replicas = max(snapshot_hash_responses.items(), key=lambda x: len(x[1]))
+def compare_and_sync_snapshot(received_snapshot, replica_id):
+    # Compare with the leader's snapshot
+    leader_snapshot = create_snapshot()
     
-    print(f"Majority snapshot hash determined with {len(replicas)} replicas agreeing.")
-
-    # Retrieve the JSON for the majority snapshot using its hash
-    majority_snapshot_json = next(key for key, value in snapshot_responses.items() if hashlib.sha256(key.encode('utf-8')).hexdigest() == majority_snapshot_hash)
-    majority_snapshot = json.loads(majority_snapshot_json)
-
-    # Debug: Print the content of the majority snapshot for inspection
-    print("Majority snapshot content:", majority_snapshot)
-
-    # Check if the leader's snapshot is part of the majority
-    leader_snapshot_json = create_snapshot()
-    leader_snapshot_hash = hashlib.sha256(leader_snapshot_json.encode('utf-8')).hexdigest()
-    leader_in_majority = leader_snapshot_hash == majority_snapshot_hash
-
-    # Debug: Print whether the leader's snapshot is in the majority
-    print("Is leader's snapshot in the majority?", leader_in_majority)
-
-    for replica in REPLICAS:
-        replica_snapshot_json = next((key for key, value in snapshot_responses.items() if replica in value), None)
-        replica_snapshot_hash = hashlib.sha256(replica_snapshot_json.encode('utf-8')).hexdigest() if replica_snapshot_json else None
-        
-        if replica_snapshot_hash == majority_snapshot_hash:
-            # The replica already has the correct snapshot
-            print(f"Sending ACK to replica {replica} which is in majority.")
-            send_ack(replica)
-        else:
-            # Update the replica with the majority snapshot
-            print(f"Sending correct snapshot to replica {replica} which is not in majority.")
-            send_correct_snapshot(replica, majority_snapshot)
-
-    if not leader_in_majority:
-        # If the leader's snapshot is not part of the majority, update the leader with the majority snapshot
-        print("Leader's snapshot is not in majority, updating the leader's snapshot.")
-        apply_snapshot(majority_snapshot)
-
-
+    # If they match, send an acknowledgment; if not, send the correct snapshot
+    if received_snapshot == leader_snapshot:
+        send_ack(replica_id)
+    else:
+        send_correct_snapshot(replica_id, leader_snapshot)
 
 def send_ack(replica_id):
     url = f"http://{replica_id}/ack_snapshot"
@@ -185,10 +131,10 @@ def update_snapshot():
 
 def create_snapshot():
     # Querying all data from each table
-    votes = Vote.query.order_by(Vote.id).all()
-    users = User.query.order_by(User.id).all()
-    ballots = Ballot.query.order_by(Ballot.id).all()
-    options = BallotOption.query.order_by(BallotOption.id).all()
+    votes = Vote.query.all()
+    users = User.query.all()
+    ballots = Ballot.query.all()
+    options = BallotOption.query.all()
 
     # Serializing the data to a dictionary format
     snapshot = {
@@ -508,7 +454,5 @@ def heartbeat():
 
 if __name__ == '__main__':
     # threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False)).start()
-    scheduler.init_app(app)
-    scheduler.start()
     threading.Thread(target=monitor_leader, daemon=True).start()
     app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False)
