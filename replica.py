@@ -103,14 +103,38 @@ def handle_snapshot_request():
 
 def find_majority_snapshot():
     global snapshot_responses
-    majority_snapshot, replicas = max(snapshot_responses.items(), key=lambda x: len(x[1]))
+    # Debug: Print the snapshot_responses for inspection
+    print("Snapshot responses received from replicas:", snapshot_responses)
+
+    # Determine the majority snapshot based on the highest number of matching snapshots
+    majority_snapshot_json, replicas = max(snapshot_responses.items(), key=lambda x: len(x[1]))
+    majority_snapshot = json.loads(majority_snapshot_json)
+    
     print(f"Majority snapshot determined with {len(replicas)} replicas agreeing.")
+    # Debug: Print the content of the majority snapshot for inspection
+    print("Majority snapshot content:", majority_snapshot)
+
+    # Check if the leader's snapshot is part of the majority
+    leader_in_majority = REPLICA_ID in replicas
+
+    # Debug: Print whether the leader's snapshot is in the majority
+    print("Is leader's snapshot in the majority?", leader_in_majority)
 
     for replica in REPLICAS:
         if replica in replicas:
-            send_ack(replica)  # The replica already has the correct snapshot
+            # The replica already has the correct snapshot
+            print(f"Sending ACK to replica {replica} which is in majority.")
+            send_ack(replica)
         else:
-            send_correct_snapshot(replica, json.loads(majority_snapshot))  # Update the replica with the majority snapshot
+            # Update the replica with the majority snapshot
+            print(f"Sending correct snapshot to replica {replica} which is not in majority.")
+            send_correct_snapshot(replica, majority_snapshot)
+
+    if not leader_in_majority:
+        # If the leader's snapshot is not part of the majority, update the leader with the majority snapshot
+        print("Leader's snapshot is not in majority, updating the leader's snapshot.")
+        apply_snapshot(majority_snapshot)
+
 
 def send_ack(replica_id):
     url = f"http://{replica_id}/ack_snapshot"
