@@ -184,6 +184,7 @@ def create_snapshot():
     return snapshot
 
 def apply_snapshot(snapshot):
+    print(f"Applying snapshot to myself ({REPLICA_ID})")
     # Clear existing data in the database tables
     db.session.query(Vote).delete()
     db.session.query(User).delete()
