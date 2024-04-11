@@ -76,6 +76,7 @@ scheduler.start()
 def request_snapshots():
     global snapshot_responses
     snapshot_responses = []
+    replicas_with_correct_snapshot = []
     with app.app_context():
         if REPLICA_ID == current_leader:
             print("requesting snapshot")
@@ -94,9 +95,15 @@ def request_snapshots():
             # Once all snapshots are collected, find the most common one
             correct_snapshot = tally_snapshots()
 
-            # Sync all replicas to the most common snapshot
+             # Identify replicas that already have the correct snapshot
+            for replica_id, snapshot in snapshot_responses:
+                if snapshot == correct_snapshot:
+                    replicas_with_correct_snapshot.append(replica_id)
+                    send_ack(replica_id)
+
+            # Send the correct snapshot only to replicas without it
             for replica in REPLICAS:
-                if replica != REPLICA_ID:
+                if replica not in replicas_with_correct_snapshot and replica != REPLICA_ID:
                     send_correct_snapshot(replica, correct_snapshot)
 
 def tally_snapshots():
