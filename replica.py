@@ -1,3 +1,4 @@
+from collections import Counter
 import json
 import sqlite3
 import threading
@@ -73,9 +74,13 @@ scheduler.start()
 
 @scheduler.task('interval', id='request_snapshots', seconds=60, misfire_grace_time=900)
 def request_snapshots():
+    global snapshot_responses
+    snapshot_responses = []
     with app.app_context():
         if REPLICA_ID == current_leader:
             print("requesting snapshot")
+            leader_snapshot = create_snapshot()  # Create the leader's snapshot
+            snapshot_responses.append(leader_snapshot)  # Include the leader's snapshot in the tally
             for replica in REPLICAS:
                 if replica != REPLICA_ID:
                     url = f"http://{replica}/request_snapshot"
@@ -83,24 +88,37 @@ def request_snapshots():
                         response = requests.get(url)
                         # Assume the response contains the snapshot
                         snapshot_data = response.json()
-                        compare_and_sync_snapshot(snapshot_data, replica)
+                        snapshot_responses.append(snapshot_data)
                     except requests.exceptions.RequestException as e:
                         print(f"Failed to request snapshot from {replica}: {str(e)}")
+            # Once all snapshots are collected, find the most common one
+            correct_snapshot = tally_snapshots()
+
+            # Sync all replicas to the most common snapshot
+            for replica in REPLICAS:
+                if replica != REPLICA_ID:
+                    send_correct_snapshot(replica, correct_snapshot)
+
+def tally_snapshots():
+    # Use Counter to find the most common snapshot
+    snapshot_counts = Counter(snapshot_responses)
+    most_common_snapshot, _ = snapshot_counts.most_common(1)[0]
+    return most_common_snapshot
 
 @app.route('/request_snapshot', methods=['GET'])
 def handle_snapshot_request():
     snapshot = create_snapshot()  # Function to create the snapshot
     return jsonify(snapshot)
 
-def compare_and_sync_snapshot(received_snapshot, replica_id):
-    # Compare with the leader's snapshot
-    leader_snapshot = create_snapshot()
+# def compare_and_sync_snapshot(received_snapshot, replica_id):
+#     # Compare with the leader's snapshot
+#     leader_snapshot = create_snapshot()
     
-    # If they match, send an acknowledgment; if not, send the correct snapshot
-    if received_snapshot == leader_snapshot:
-        send_ack(replica_id)
-    else:
-        send_correct_snapshot(replica_id, leader_snapshot)
+#     # If they match, send an acknowledgment; if not, send the correct snapshot
+#     if received_snapshot == leader_snapshot:
+#         send_ack(replica_id)
+#     else:
+#         send_correct_snapshot(replica_id, leader_snapshot)
 
 def send_ack(replica_id):
     url = f"http://{replica_id}/ack_snapshot"
