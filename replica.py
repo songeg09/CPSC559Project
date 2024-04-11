@@ -81,15 +81,15 @@ def request_snapshots():
         if REPLICA_ID == current_leader:
             print("requesting snapshot")
             leader_snapshot = create_snapshot()  # Create the leader's snapshot
-            snapshot_responses.append(leader_snapshot)  # Include the leader's snapshot in the tally
+            snapshot_responses.append((REPLICA_ID, leader_snapshot))  # Include the leader's snapshot in the tally
             for replica in REPLICAS:
                 if replica != REPLICA_ID:
                     url = f"http://{replica}/request_snapshot"
                     try:
-                        response = requests.get(url)
+                        response = requests.get(url, timeout=5)
                         # Assume the response contains the snapshot
                         snapshot_data = response.json()
-                        snapshot_responses.append(snapshot_data)
+                        snapshot_responses.append((replica, snapshot_data))
                     except requests.exceptions.RequestException as e:
                         print(f"Failed to request snapshot from {replica}: {str(e)}")
             # Once all snapshots are collected, find the most common one
@@ -107,8 +107,11 @@ def request_snapshots():
                     send_correct_snapshot(replica, correct_snapshot)
 
 def tally_snapshots():
-    # Convert each snapshot dictionary to a string representation
-    serialized_snapshots = [json.dumps(snapshot, sort_keys=True) for snapshot in snapshot_responses]
+    # Extract just the snapshots from the tuples in snapshot_responses
+    snapshots = [snapshot for _, snapshot in snapshot_responses]
+
+    # Convert each snapshot dictionary to a string representation for comparison
+    serialized_snapshots = [json.dumps(snapshot, sort_keys=True) for snapshot in snapshots]
 
     # Use Counter to find the most common serialized snapshot
     snapshot_counts = Counter(serialized_snapshots)
@@ -117,6 +120,7 @@ def tally_snapshots():
     # Convert the most common serialized snapshot back to a dictionary
     most_common_snapshot = json.loads(most_common_serialized_snapshot)
     return most_common_snapshot
+
 
 @app.route('/request_snapshot', methods=['GET'])
 def handle_snapshot_request():
