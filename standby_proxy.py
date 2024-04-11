@@ -53,10 +53,10 @@ def submit_registration():
         # As each future completes, check if there was an error
         for future in as_completed(future_to_replica):
             error = future.result()
-            if error:
+            if len(errors) == len(active_replicas):
                 errors.append(error)
 
-    if errors:
+    if len(errors) == len(active_replicas):
         flash({"Signup failed": errors})
         return redirect(url_for('signup')) 
         # return jsonify({"success": False, "errors": errors}), 500
@@ -93,7 +93,7 @@ def ballot_list():
             except Exception as exc:
                 errors.append(f"Replica {replica} generated an exception: {str(exc)}")
 
-    if errors:
+    if len(errors) == len(active_replicas):
         return jsonify({"success": False, "errors": errors}), 500
     # Assuming you have a 'ballot_list.html' template to render ballots
     return render_template('ballot_list.html', ballots=ballots)
@@ -126,7 +126,7 @@ def vote_list():
                 ballots.extend(data)
                 break
 
-    if errors:
+    if len(errors) == len(active_replicas):
         return jsonify({"success": False, "errors": errors}), 500
     return render_template('vote_list.html', ballots=ballots)
 
@@ -160,7 +160,7 @@ def vote_detail(ballot_id):
                 ballot_data.append(data)
                 break
 
-    if errors:
+    if len(errors) == len(active_replicas):
         return jsonify({"success": False, "errors": errors}), 500
 
     # Assume the first successful response has the needed data structure
@@ -194,7 +194,7 @@ def ballot_detail(ballot_id):
                 ballot_data.append(data)
                 break
 
-    if errors:
+    if len(errors) == len(active_replicas):
         return jsonify({"success": False, "errors": errors}), 500
 
     # Assume the first successful response has the needed data structure
@@ -237,7 +237,7 @@ def vote_submit():
                 ballot_data.append(data)
                 break
     
-    if errors:
+    if len(errors) == len(active_replicas):
         return jsonify({"success": False, "errors": errors}), 500
 
     # Assume the first successful response has the needed data structure
@@ -306,10 +306,10 @@ def submit_ballot_edit(ballot_id):
 
         for future in as_completed(future_to_replica):
             error = future.result()
-            if error:
+            if len(errors) == len(active_replicas):
                 errors.append(error)
 
-    if errors:
+    if len(errors) == len(active_replicas):
         # Handle errors, e.g., by displaying them to the user
         return "Error updating ballot: " + "; ".join(errors), 500
 
@@ -342,10 +342,10 @@ def forward_vote():
         # Process the results as they become available
         for future in as_completed(future_to_replica):
             error = future.result()
-            if error:
+            if len(errors) == len(active_replicas):
                 errors.append(error)
 
-    if errors:
+    if len(errors) == len(active_replicas):
         return jsonify({"success": False, "errors": errors}), 500
     return jsonify({"success": True, "message": "Vote sent to all replicas"}), 200
 
@@ -426,10 +426,10 @@ def ballot_create():
 
             for future in as_completed(future_to_replica):
                 error = future.result()
-                if error:
+                if len(errors) == len(active_replicas):
                     errors.append(error)
 
-        if errors:
+        if len(errors) == len(active_replicas):
             return render_template('ballot_create.html', errors=errors)
 
         return redirect(url_for('ballot_list'))
