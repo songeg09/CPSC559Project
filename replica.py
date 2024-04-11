@@ -100,9 +100,15 @@ def request_snapshots():
                     send_correct_snapshot(replica, correct_snapshot)
 
 def tally_snapshots():
-    # Use Counter to find the most common snapshot
-    snapshot_counts = Counter(snapshot_responses)
-    most_common_snapshot, _ = snapshot_counts.most_common(1)[0]
+    # Convert each snapshot dictionary to a string representation
+    serialized_snapshots = [json.dumps(snapshot, sort_keys=True) for snapshot in snapshot_responses]
+
+    # Use Counter to find the most common serialized snapshot
+    snapshot_counts = Counter(serialized_snapshots)
+    most_common_serialized_snapshot, _ = snapshot_counts.most_common(1)[0]
+
+    # Convert the most common serialized snapshot back to a dictionary
+    most_common_snapshot = json.loads(most_common_serialized_snapshot)
     return most_common_snapshot
 
 @app.route('/request_snapshot', methods=['GET'])
