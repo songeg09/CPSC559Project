@@ -102,9 +102,11 @@ def request_snapshots():
                     send_ack(replica_id)
 
             # Send the correct snapshot only to replicas without it
-            for replica in REPLICAS:
+            for replica, snapshot in snapshot_responses:
                 if replica not in replicas_with_correct_snapshot and replica != REPLICA_ID:
                     send_correct_snapshot(replica, correct_snapshot)
+                elif replica not in replicas_with_correct_snapshot and replica != REPLICA_ID:
+                    apply_snapshot(correct_snapshot)
 
 def tally_snapshots():
     # Extract just the snapshots from the tuples in snapshot_responses
